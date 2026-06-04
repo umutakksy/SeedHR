@@ -222,12 +222,24 @@ public class RecruitmentService : IRecruitmentService
 
     public async Task<IEnumerable<InterviewDto>> GetInterviewsAsync()
     {
-        var interviews = await _unitOfWork.Interviews.GetAllAsync();
-        foreach (var interview in interviews)
+        var interviews = (await _unitOfWork.Interviews.GetAllAsync()).ToList();
+        if (interviews.Any())
         {
-            interview.Candidate = await _unitOfWork.Candidates.GetByIdAsync(interview.CandidateId);
-            interview.InterviewerUser = await _unitOfWork.Users.GetByIdAsync(interview.InterviewerUserId);
-            interview.JobPosting = await _unitOfWork.JobPostings.GetByIdAsync(interview.JobPostingId);
+            var candidates = (await _unitOfWork.Candidates.GetAllAsync()).ToDictionary(c => c.Id);
+            var users = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
+            var jobPostings = (await _unitOfWork.JobPostings.GetAllAsync()).ToDictionary(j => j.Id);
+
+            foreach (var interview in interviews)
+            {
+                if (!string.IsNullOrEmpty(interview.CandidateId) && candidates.TryGetValue(interview.CandidateId, out var candidate))
+                    interview.Candidate = candidate;
+                
+                if (!string.IsNullOrEmpty(interview.InterviewerUserId) && users.TryGetValue(interview.InterviewerUserId, out var user))
+                    interview.InterviewerUser = user;
+                
+                if (!string.IsNullOrEmpty(interview.JobPostingId) && jobPostings.TryGetValue(interview.JobPostingId, out var posting))
+                    interview.JobPosting = posting;
+            }
         }
         return _mapper.Map<IEnumerable<InterviewDto>>(interviews);
     }

@@ -55,6 +55,7 @@ public class LeaveService : ILeaveService
 
         var created = await _unitOfWork.LeaveRequests.AddAsync(leaveRequest);
         await _unitOfWork.SaveChangesAsync();
+        await PopulateNavigationPropertiesAsync(created);
 
         return _mapper.Map<LeaveRequestDto>(created);
     }
@@ -80,6 +81,7 @@ public class LeaveService : ILeaveService
 
         var updated = await _unitOfWork.LeaveRequests.UpdateAsync(leaveRequest);
         await _unitOfWork.SaveChangesAsync();
+        await PopulateNavigationPropertiesAsync(updated);
 
         await _notificationService.CreateNotificationAsync(
             leaveRequest.UserId,
@@ -107,6 +109,7 @@ public class LeaveService : ILeaveService
 
         var updated = await _unitOfWork.LeaveRequests.UpdateAsync(leaveRequest);
         await _unitOfWork.SaveChangesAsync();
+        await PopulateNavigationPropertiesAsync(updated);
 
         await _notificationService.CreateNotificationAsync(
             leaveRequest.UserId,
@@ -123,18 +126,21 @@ public class LeaveService : ILeaveService
     {
         var leaveRequest = await _unitOfWork.LeaveRequests.GetByIdAsync(id)
             ?? throw new NotFoundException($"Leave request with ID {id} not found");
+        await PopulateNavigationPropertiesAsync(leaveRequest);
         return _mapper.Map<LeaveRequestDto>(leaveRequest);
     }
 
     public async Task<IEnumerable<LeaveRequestDto>> GetUserLeaveRequestsAsync(string userId)
     {
-        var leaveRequests = await _unitOfWork.LeaveRequests.GetByUserAsync(userId);
+        var leaveRequests = (await _unitOfWork.LeaveRequests.GetByUserAsync(userId)).ToList();
+        await PopulateNavigationPropertiesBulkAsync(leaveRequests);
         return _mapper.Map<IEnumerable<LeaveRequestDto>>(leaveRequests);
     }
 
     public async Task<IEnumerable<LeaveRequestDto>> GetPendingLeaveRequestsAsync()
     {
-        var leaveRequests = await _unitOfWork.LeaveRequests.GetByStatusAsync("Pending");
+        var leaveRequests = (await _unitOfWork.LeaveRequests.GetByStatusAsync("Pending")).ToList();
+        await PopulateNavigationPropertiesBulkAsync(leaveRequests);
         return _mapper.Map<IEnumerable<LeaveRequestDto>>(leaveRequests);
     }
 
@@ -160,12 +166,25 @@ public class LeaveService : ILeaveService
     {
         var balance = await _unitOfWork.LeaveBalances.GetByUserAndTypeAsync(userId, leaveTypeId)
             ?? throw new NotFoundException("Leave balance not found");
+        balance.User = await _unitOfWork.Users.GetByIdAsync(userId);
+        balance.LeaveType = await _unitOfWork.LeaveTypes.GetByIdAsync(leaveTypeId);
         return _mapper.Map<LeaveBalanceDto>(balance);
     }
 
     public async Task<IEnumerable<LeaveBalanceDto>> GetUserLeaveBalancesAsync(string userId)
     {
-        var balances = await _unitOfWork.LeaveBalances.GetByUserAsync(userId);
+        var balances = (await _unitOfWork.LeaveBalances.GetByUserAsync(userId)).ToList();
+        if (balances.Any())
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            var types = (await _unitOfWork.LeaveTypes.GetAllAsync()).ToDictionary(t => t.Id);
+            foreach (var b in balances)
+            {
+                b.User = user;
+                if (!string.IsNullOrEmpty(b.LeaveTypeId) && types.TryGetValue(b.LeaveTypeId, out var type))
+                    b.LeaveType = type;
+            }
+        }
         return _mapper.Map<IEnumerable<LeaveBalanceDto>>(balances);
     }
 
@@ -179,13 +198,41 @@ public class LeaveService : ILeaveService
     {
         var futureDate = DateTime.UtcNow.AddDays(days);
         var leaveRequests = await _unitOfWork.LeaveRequests.GetByDateRangeAsync(DateTime.UtcNow, futureDate);
-        var approved = leaveRequests.Where(lr => lr.Status == "Approved");
+        var approved = leaveRequests.Where(lr => lr.Status == "Approved").ToList();
+        await PopulateNavigationPropertiesBulkAsync(approved);
         return _mapper.Map<IEnumerable<LeaveRequestDto>>(approved);
     }
 
     public async Task<IEnumerable<LeaveRequestDto>> GetAllLeaveRequestsAsync()
     {
-        var leaveRequests = await _unitOfWork.LeaveRequests.GetAllAsync();
+        var leaveRequests = (await _unitOfWork.LeaveRequests.GetAllAsync()).ToList();
+        await PopulateNavigationPropertiesBulkAsync(leaveRequests);
         return _mapper.Map<IEnumerable<LeaveRequestDto>>(leaveRequests);
+    }
+
+    private async Task PopulateNavigationPropertiesAsync(LeaveRequest r)
+    {
+        if (r == null) return;
+        if (!string.IsNullOrEmpty(r.UserId) && r.User == null)
+            r.User = await _unitOfWork.Users.GetByIdAsync(r.UserId);
+        if (!string.IsNullOrEmpty(r.LeaveTypeId) && r.LeaveType == null)
+            r.LeaveType = await _unitOfWork.LeaveTypes.GetByIdAsync(r.LeaveTypeId);
+    }
+
+    private async Task PopulateNavigationPropertiesBulkAsync(List<LeaveRequest> requests)
+    {
+        if (requests == null || requests.Count == 0) return;
+
+        var users = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
+        var leaveTypes = (await _unitOfWork.LeaveTypes.GetAllAsync()).ToDictionary(t => t.Id);
+
+        foreach (var r in requests)
+        {
+            if (!string.IsNullOrEmpty(r.UserId) && users.TryGetValue(r.UserId, out var user))
+                r.User = user;
+
+            if (!string.IsNullOrEmpty(r.LeaveTypeId) && leaveTypes.TryGetValue(r.LeaveTypeId, out var type))
+                r.LeaveType = type;
+        }
     }
 }

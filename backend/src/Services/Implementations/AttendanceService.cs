@@ -76,30 +76,40 @@ public class AttendanceService : IAttendanceService
 
     public async Task<IEnumerable<AttendanceDto>> GetUserAttendanceAsync(string userId, DateTime startDate, DateTime endDate)
     {
-        // If dates are default/min value, just return all for this user
+        List<Attendance> records;
         if (startDate == DateTime.MinValue && endDate == DateTime.MaxValue)
         {
-            var records = await _unitOfWork.Attendances.GetByUserAsync(userId);
+            records = (await _unitOfWork.Attendances.GetByUserAsync(userId)).ToList();
+        }
+        else
+        {
+            records = (await _unitOfWork.Attendances.GetByUserDateRangeAsync(userId, startDate, endDate)).ToList();
+        }
+
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user != null)
+        {
             foreach (var r in records)
             {
-                await PopulateUserAsync(r);
+                r.User = user;
             }
-            return _mapper.Map<IEnumerable<AttendanceDto>>(records);
         }
-        var attendanceRecords = await _unitOfWork.Attendances.GetByUserDateRangeAsync(userId, startDate, endDate);
-        foreach (var r in attendanceRecords)
-        {
-            await PopulateUserAsync(r);
-        }
-        return _mapper.Map<IEnumerable<AttendanceDto>>(attendanceRecords);
+        return _mapper.Map<IEnumerable<AttendanceDto>>(records);
     }
 
     public async Task<IEnumerable<AttendanceDto>> GetAllAttendanceAsync()
     {
-        var attendanceRecords = await _unitOfWork.Attendances.GetAllAsync();
-        foreach (var r in attendanceRecords)
+        var attendanceRecords = (await _unitOfWork.Attendances.GetAllAsync()).ToList();
+        if (attendanceRecords.Any())
         {
-            await PopulateUserAsync(r);
+            var users = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
+            foreach (var r in attendanceRecords)
+            {
+                if (!string.IsNullOrEmpty(r.UserId) && users.TryGetValue(r.UserId, out var user))
+                {
+                    r.User = user;
+                }
+            }
         }
         return _mapper.Map<IEnumerable<AttendanceDto>>(attendanceRecords);
     }
