@@ -2,6 +2,7 @@ namespace SeedHR.Backend.Controllers;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Models.DTOs.Auth;
 using SeedHR.Backend.Services.Interfaces;
@@ -25,6 +26,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("LoginRateLimit")]
     public async Task<ActionResult<ApiResponse<LoginResponse>>> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
