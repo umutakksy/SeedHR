@@ -25,6 +25,7 @@ public static class DatabaseSeeder
         await context.Candidates.DeleteManyAsync(_ => true);
         await context.CandidateApplications.DeleteManyAsync(_ => true);
         await context.Interviews.DeleteManyAsync(_ => true);
+        await context.WorkSchedules.DeleteManyAsync(_ => true);
 
         // 1. Seed Roles
         var roles = new List<Role>
@@ -880,5 +881,46 @@ public static class DatabaseSeeder
         };
 
         await context.Candidates.InsertManyAsync(new List<Candidate> { candidate1, candidate2 });
+
+        // 13. Seed Work Schedules (Vardiya / Çalışma Takvimi)
+        var schedules = new List<WorkSchedule>();
+        var startDate = DateTime.UtcNow.Date.AddDays(-40);
+        var endDate = DateTime.UtcNow.Date.AddDays(40);
+
+        int scheduleIdx = 1;
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
+            var type = isWeekend ? "Weekend" : "Working";
+            var desc = isWeekend ? "Hafta Sonu Tatili" : "Standart Mesai (09:00 - 18:00)";
+
+            // Special days
+            if (date == DateTime.UtcNow.Date.AddDays(-5))
+            {
+                type = "Holiday";
+                desc = "Şirket İçi Eğitim Günü (Mesai Yok)";
+            }
+            else if (date == DateTime.UtcNow.Date.AddDays(10))
+            {
+                type = "Holiday";
+                desc = "Resmi Tatil";
+            }
+            else if (date == DateTime.UtcNow.Date.AddDays(15))
+            {
+                type = "Working";
+                desc = "Yarım Gün Mesai (09:00 - 13:00)";
+            }
+
+            schedules.Add(new WorkSchedule
+            {
+                Id = $"ws_{scheduleIdx++}",
+                Date = date,
+                Type = type,
+                Description = desc,
+                DayOfWeek = (int)date.DayOfWeek,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        await context.WorkSchedules.InsertManyAsync(schedules);
     }
 }
