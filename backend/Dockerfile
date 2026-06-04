@@ -15,6 +15,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build-env /app/out ./
 
+# Copy configuration files
+COPY .env ./
+COPY appsettings*.json ./
+
 # Create directory for file uploads
 RUN mkdir -p uploads/documents uploads/cvs
 
