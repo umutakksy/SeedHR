@@ -74,10 +74,11 @@ namespace SeedHR.Frontend.Pages
             }
 
             string turnstileToken = Request.Form["cf-turnstile-response"]!;
-            // Bypass Turnstile locally in Development
             if (string.IsNullOrEmpty(turnstileToken))
             {
-                turnstileToken = "mock_turnstile_token_development";
+                ErrorMessage = "Güvenlik doğrulaması (CAPTCHA) zorunludur.";
+                await LoadOpenPostingsAsync();
+                return Page();
             }
 
             using var stream = CVFile.OpenReadStream();

@@ -150,35 +150,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Rate Limiting (General vs Login protection)
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    // General API rate limit (100 requests per 1 minute per IP)
-    options.AddPolicy("GeneralRateLimit", httpContext =>
-    {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 100,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        });
-    });
-
-    // Strict Login rate limit (5 requests per 1 minute per IP to prevent brute-force)
-    options.AddPolicy("LoginRateLimit", httpContext =>
-    {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 5,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        });
-    });
-});
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();

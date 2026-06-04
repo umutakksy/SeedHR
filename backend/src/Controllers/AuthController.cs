@@ -32,21 +32,15 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("Invalid input"));
 
         // Verify Turnstile Captcha
-        var appEnv = Environment.GetEnvironmentVariable("APP_ENVIRONMENT") ?? "Development";
-        var isDev = appEnv.Equals("Development", StringComparison.OrdinalIgnoreCase);
-
-        if (!isDev)
+        if (string.IsNullOrEmpty(request.TurnstileToken))
         {
-            if (string.IsNullOrEmpty(request.TurnstileToken))
-            {
-                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
-            }
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+        }
 
-            var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
-            if (!turnstileSuccess)
-            {
-                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
-            }
+        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
+        if (!turnstileSuccess)
+        {
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
         }
 
         var result = await _authService.LoginAsync(request);

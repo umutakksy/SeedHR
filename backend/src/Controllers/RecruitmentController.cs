@@ -101,21 +101,15 @@ public class RecruitmentController : ControllerBase
         IFormFile cv)
     {
         // Verify Turnstile Captcha
-        var appEnv = Environment.GetEnvironmentVariable("APP_ENVIRONMENT") ?? "Development";
-        var isDev = appEnv.Equals("Development", StringComparison.OrdinalIgnoreCase);
-
-        if (!isDev)
+        if (string.IsNullOrEmpty(turnstileToken))
         {
-            if (string.IsNullOrEmpty(turnstileToken))
-            {
-                return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
-            }
+            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+        }
 
-            var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(turnstileToken);
-            if (!turnstileSuccess)
-            {
-                return BadRequest(ApiResponse<CandidateDto>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
-            }
+        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(turnstileToken);
+        if (!turnstileSuccess)
+        {
+            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
         }
 
         if (cv == null || cv.Length == 0)
