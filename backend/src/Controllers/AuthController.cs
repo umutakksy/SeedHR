@@ -14,11 +14,13 @@ public class AuthController : ControllerBase
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _turnstileSecretKey;
 
-    public AuthController(IAuthenticationService authService, IHttpClientFactory httpClientFactory)
+    public AuthController(IAuthenticationService authService, IHttpClientFactory httpClientFactory, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _authService = authService;
         _httpClientFactory = httpClientFactory;
-        _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") ?? "";
+        _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") 
+                              ?? configuration["Turnstile:SecretKey"] 
+                              ?? "0x4AAAAAADe7IxiQPHhZQ2ewHtNCl_9xpGQ";
     }
 
     [HttpPost("login")]
