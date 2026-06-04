@@ -34,17 +34,17 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
         }
 
-        var turnstileSuccess = await VerifyTurnstileTokenAsync(request.TurnstileToken);
+        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
         if (!turnstileSuccess)
         {
-            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması başarısız oldu. Lütfen tekrar deneyin."));
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
         }
 
         var result = await _authService.LoginAsync(request);
         return Ok(ApiResponse<LoginResponse>.SuccessResponse(result, "Login successful"));
     }
 
-    private async Task<bool> VerifyTurnstileTokenAsync(string token)
+    private async Task<(bool Success, string ErrorMessage)> VerifyTurnstileTokenAsync(string token)
     {
         try
         {
@@ -57,21 +57,32 @@ public class AuthController : ControllerBase
 
             var content = new FormUrlEncodedContent(values);
             var response = await client.PostAsync("https://challenges.cloudflare.com/turnstile/v0/siteverify", content);
-
-            if (!response.IsSuccessStatusCode) return false;
-
             var jsonString = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode) 
+                return (false, $"HTTP Hata {response.StatusCode}: {jsonString}");
+
             using var doc = System.Text.Json.JsonDocument.Parse(jsonString);
-            if (doc.RootElement.TryGetProperty("success", out var successProp))
+            if (doc.RootElement.TryGetProperty("success", out var successProp) && successProp.GetBoolean())
             {
-                return successProp.GetBoolean();
+                return (true, string.Empty);
             }
 
-            return false;
+            var errors = new List<string>();
+            if (doc.RootElement.TryGetProperty("error-codes", out var errorCodesProp) && errorCodesProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var err in errorCodesProp.EnumerateArray())
+                {
+                    errors.Add(err.GetString() ?? "");
+                }
+            }
+
+            var errorStr = errors.Count > 0 ? string.Join(", ", errors) : "Bilinmeyen Turnstile hatası";
+            return (false, errorStr);
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, $"İstisna oluştu: {ex.Message}");
         }
     }
 
