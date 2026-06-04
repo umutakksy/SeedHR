@@ -4,12 +4,64 @@
     ViewData["Title"] = "Sistem Günlükleri (Logs)";
 }
 
-<div class="space-y-6" x-data="{ activeFile: '@Model.SelectedLogName', lineCount: 250 }">
+@using System.Text.RegularExpressions
+@using System.Text.Encodings.Web
+@functions {
+    public static string FormatLogLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return string.Empty;
+
+        // Escape HTML to prevent XSS
+        var escaped = System.Net.WebUtility.HtmlEncode(line);
+
+        // Highlight date/time at the start (e.g. 2026-06-04 22:03:57.779 +00:00)
+        var dateRegex = new Regex(@"^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s\+\d{2}:\d{2}");
+        escaped = dateRegex.Replace(escaped, m => $"<span class=\"text-slate-400 font-semibold font-mono\">{m.Value}</span>");
+
+        // Highlight log levels
+        escaped = escaped.Replace("[INF]", "<span class=\"px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/50\">INFO</span>");
+        escaped = escaped.Replace("[WRN]", "<span class=\"px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/50\">WARN</span>");
+        escaped = escaped.Replace("[ERR]", "<span class=\"px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200/50 animate-pulse\">ERROR</span>");
+        escaped = escaped.Replace("[DBG]", "<span class=\"px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200/50\">DEBUG</span>");
+
+        // Highlight HTTP methods
+        escaped = escaped.Replace("GET", "<span class=\"text-indigo-600 font-semibold bg-indigo-50/50 px-1 rounded\">GET</span>");
+        escaped = escaped.Replace("POST", "<span class=\"text-emerald-600 font-semibold bg-emerald-50/50 px-1 rounded\">POST</span>");
+        escaped = escaped.Replace("PUT", "<span class=\"text-amber-600 font-semibold bg-amber-50/50 px-1 rounded\">PUT</span>");
+        escaped = escaped.Replace("DELETE", "<span class=\"text-rose-600 font-semibold bg-rose-50/50 px-1 rounded\">DELETE</span>");
+
+        // Highlight specific responses/errors
+        escaped = escaped.Replace(" - 429 ", " - <span class=\"text-rose-650 font-bold bg-rose-50 px-1 rounded border border-rose-100\">429 (Rate Limited)</span> ");
+        escaped = escaped.Replace(" - 200 ", " - <span class=\"text-emerald-650 font-bold bg-emerald-50 px-1 rounded border border-emerald-100\">200 OK</span> ");
+        escaped = escaped.Replace(" - 500 ", " - <span class=\"text-rose-700 font-bold bg-rose-100 px-1.5 rounded border border-rose-200 animate-pulse\">500 Internal Error</span> ");
+        escaped = escaped.Replace(" - 404 ", " - <span class=\"text-amber-650 font-bold bg-amber-50 px-1 rounded border border-amber-100\">404 Not Found</span> ");
+        escaped = escaped.Replace(" - 401 ", " - <span class=\"text-orange-600 font-bold bg-orange-50 px-1 rounded border border-orange-100\">401 Unauthorized</span> ");
+        escaped = escaped.Replace(" - 403 ", " - <span class=\"text-red-600 font-bold bg-red-50 px-1 rounded border border-red-100\">403 Forbidden</span> ");
+
+        return escaped;
+    }
+}
+
+@{
+    var rawLines = (Model.SelectedLogContent ?? "").Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+    int infoCount = 0;
+    int warnCount = 0;
+    int errCount = 0;
+
+    foreach (var l in rawLines)
+    {
+        if (l.Contains("[INF]")) infoCount++;
+        else if (l.Contains("[WRN]")) warnCount++;
+        else if (l.Contains("[ERR]")) errCount++;
+    }
+}
+
+<div class="space-y-6" x-data="{ activeFile: '@Model.SelectedLogName', lineCount: 250, searchLogFile: '' }">
     <!-- Breadcrumb / Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Yönetici Araçları</p>
-            <h2 class="text-2xl font-bold text-slate-800 dark:text-zinc-100 tracking-tight">Sistem Günlükleri</h2>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-zinc-100 tracking-tight">Sistem Günlükleri (Logs)</h2>
             <p class="text-sm text-slate-500 dark:text-zinc-400 mt-1">Backend sunucu log dosyalarını görüntüleyin, analiz edin ve yönetin.</p>
         </div>
     </div>
@@ -27,7 +79,7 @@
     }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-455 rounded-2xl flex items-center gap-3 text-sm shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-400 rounded-2xl flex items-center gap-3 text-sm shadow-sm" x-data="{ show: true }" x-show="show">
             <i class="fa-solid fa-circle-exclamation text-lg"></i>
             <span class="flex-1">@Model.ErrorMessage</span>
             <button class="text-rose-500 hover:text-rose-700" @@click="show = false">
@@ -46,10 +98,16 @@
                     <i class="fa-solid fa-folder-open text-indigo-500"></i>
                     <span>Log Dosyaları (@Model.LogFiles.Count)</span>
                 </h3>
-                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold">TXT</span>
+                <span class="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-full text-[10px] font-bold">TXT</span>
             </div>
 
-            <div class="space-y-2 max-h-[550px] overflow-y-auto custom-scrollbar pr-1">
+            <!-- Search log files -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" x-model="searchLogFile" placeholder="Dosya adı ara..." class="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-8.5 pr-3 py-1.5 text-xs text-slate-700 placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+
+            <div class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
                 @if (Model.LogFiles.Count == 0)
                 {
                     <div class="text-center py-8 text-slate-400 text-xs">
@@ -62,7 +120,8 @@
                     @foreach (var logFile in Model.LogFiles)
                     {
                         var isSelected = logFile.FileName == Model.SelectedLogName;
-                        <div class="group flex items-center justify-between p-3 rounded-xl border transition @(isSelected ? "bg-indigo-50/50 border-indigo-200 text-indigo-700" : "bg-slate-50/30 border-slate-100 hover:bg-slate-50 hover:border-slate-200")">
+                        <div class="group flex items-center justify-between p-3 rounded-xl border transition @(isSelected ? "bg-indigo-50/50 border-indigo-200 text-indigo-700" : "bg-slate-50/30 border-slate-100 hover:bg-slate-50 hover:border-slate-200")" 
+                             x-show="searchLogFile === '' || '@logFile.FileName'.toLowerCase().includes(searchLogFile.toLowerCase())">
                             <a href="?viewFile=@logFile.FileName" class="flex-1 min-w-0 pr-2">
                                 <div class="flex items-center gap-2">
                                     <i class="fa-solid fa-file-lines text-xs @(isSelected ? "text-indigo-600" : "text-slate-400")"></i>
@@ -86,7 +145,7 @@
         </div>
 
         <!-- Log Content Viewer -->
-        <div class="lg:col-span-2 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm min-h-[500px]">
+        <div class="lg:col-span-2 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm min-h-[550px]">
             @if (string.IsNullOrEmpty(Model.SelectedLogName))
             {
                 <div class="flex-1 flex flex-col items-center justify-center text-center py-12 text-slate-400">
@@ -94,29 +153,44 @@
                         <i class="fa-solid fa-code text-2xl"></i>
                     </div>
                     <h4 class="font-bold text-slate-700 text-sm">Günlük İçeriği</h4>
-                    <p class="text-xs mt-1 max-w-sm">İçeriğini satır satır incelemek istediğiniz log dosyasını sol taraftaki listeden seçin.</p>
+                    <p class="text-xs mt-1 max-w-sm">İçeriğini incelemek istediğiniz log dosyasını sol taraftaki listeden seçin.</p>
                 </div>
             }
             else
             {
+                <!-- Header of Log Viewer -->
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             <h4 class="font-bold text-slate-800 text-sm truncate">@Model.SelectedLogName</h4>
                         </div>
-                        <p class="text-xs text-slate-450 mt-0.5">Dosyadan okunan son günlük satırları gösteriliyor.</p>
+                        <!-- Log Stats Widget -->
+                        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Satır: @rawLines.Length</span>
+                            @if (infoCount > 0)
+                            {
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">Info: @infoCount</span>
+                            }
+                            @if (warnCount > 0)
+                            {
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100">Warn: @warnCount</span>
+                            }
+                            @if (errCount > 0)
+                            {
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-100 animate-pulse">Error: @errCount</span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <!-- Refresher / Line selector -->
+                    <div class="flex items-center gap-2 self-start sm:self-center">
                         <form method="get" class="flex items-center gap-1.5">
                             <input type="hidden" name="viewFile" value="@Model.SelectedLogName" />
                             <select name="lines" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="100">Son 100 Satır</option>
-                                <option value="250" selected>Son 250 Satır</option>
-                                <option value="500">Son 500 Satır</option>
-                                <option value="1000">Son 1000 Satır</option>
+                                <option value="100" selected="@(Request.Query["lines"] == "100")">Son 100 Satır</option>
+                                <option value="250" selected="@(Request.Query["lines"] == "250" || string.IsNullOrEmpty(Request.Query["lines"]))">Son 250 Satır</option>
+                                <option value="500" selected="@(Request.Query["lines"] == "500")">Son 500 Satır</option>
+                                <option value="1000" selected="@(Request.Query["lines"] == "1000")">Son 1000 Satır</option>
                             </select>
                             <a href="?viewFile=@Model.SelectedLogName" class="p-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl border border-slate-200 text-slate-500 transition" title="Yenile">
                                 <i class="fa-solid fa-arrows-rotate text-xs"></i>
@@ -125,22 +199,54 @@
                     </div>
                 </div>
 
-                <!-- Live Log Screen (Terminal Theme) -->
-                <div class="flex-1 bg-zinc-950 border border-zinc-900 rounded-2xl p-4 flex flex-col font-mono text-[11px] text-zinc-350 leading-relaxed overflow-hidden">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3 text-[10px] text-zinc-500">
-                        <div class="flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <span class="ml-1 select-none font-bold">SYSTEM_LOG_CONSOLE</span>
+                <!-- Light Terminal / Console Viewer -->
+                <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col overflow-hidden shadow-sm" x-data="{ lineQuery: '' }">
+                    <!-- Client-side filter input -->
+                    <div class="bg-white border-b border-slate-200/60 px-4 py-2.5 flex items-center justify-between gap-3">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" x-model="lineQuery" placeholder="Satır içi ara veya filtrele (örn. '429', 'Exception', 'GET')..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8.5 pr-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
                         </div>
-                        <button onclick="navigator.clipboard.writeText(document.getElementById('logContentText').innerText); alert('Günlük içeriği panoya kopyalandı.');" class="hover:text-zinc-300 transition" title="Kopyala">
-                            <i class="fa-solid fa-copy mr-1"></i>Kopyala
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('logContentTextPlain').innerText); alert('Günlük içeriği panoya kopyalandı.');" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-655 text-[11px] font-semibold rounded-lg transition flex items-center gap-1.5" title="Kopyala">
+                            <i class="fa-solid fa-copy"></i><span>Kopyala</span>
                         </button>
                     </div>
-                    
-                    <div class="flex-1 overflow-auto custom-scrollbar max-h-[500px]" id="logViewerContainer">
-                        <pre id="logContentText" class="whitespace-pre-wrap break-all pr-2">@Model.SelectedLogContent</pre>
+
+                    <!-- Hidden container for plain-text copy functionality -->
+                    <div style="display: none;" id="logContentTextPlain">@Model.SelectedLogContent</div>
+
+                    <!-- Log console body -->
+                    <div class="flex-1 overflow-auto max-h-[550px] custom-scrollbar p-2" id="logViewerContainer">
+                        <div class="divide-y divide-slate-100 font-mono text-[10.5px] leading-relaxed">
+                            @{
+                                var lineIndex = 1;
+                            }
+                            @foreach (var line in rawLines)
+                            {
+                                if (string.IsNullOrWhiteSpace(line)) continue;
+                                
+                                var isError = line.Contains("[ERR]") || line.Contains("Exception") || line.Contains("fail:");
+                                var isWarning = line.Contains("[WRN]") || line.Contains("warn:");
+                                
+                                var rowClass = "hover:bg-indigo-50/20 transition flex items-start py-1.5 px-3 gap-3 rounded-lg";
+                                if (isError) {
+                                    rowClass += " bg-rose-50/50 border-l-[3px] border-l-rose-500";
+                                } else if (isWarning) {
+                                    rowClass += " bg-amber-50/30 border-l-[3px] border-l-amber-500";
+                                } else {
+                                    rowClass += " border-l-[3px] border-l-transparent";
+                                }
+                                
+                                var formattedLine = FormatLogLine(line);
+                                
+                                <div class="@rowClass" x-show="lineQuery === '' || '@Html.Raw(JavaScriptEncoder.Default.Encode(line))'.toLowerCase().includes(lineQuery.toLowerCase())">
+                                    <span class="text-slate-400 select-none text-right w-8 shrink-0 pr-1.5 border-r border-slate-200/50">@lineIndex</span>
+                                    <span class="flex-1 break-all text-slate-750">@Html.Raw(formattedLine)</span>
+                                </div>
+                                
+                                lineIndex++;
+                            }
+                        </div>
                     </div>
                 </div>
             }
