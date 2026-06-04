@@ -16,11 +16,13 @@ namespace SeedHR.Frontend.Services
     {
         private readonly IHttpClientFactory _clientFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<ApiService> _logger;
 
-        public ApiService(IHttpClientFactory clientFactory, IHttpContextAccessor httpContextAccessor)
+        public ApiService(IHttpClientFactory clientFactory, IHttpContextAccessor httpContextAccessor, ILogger<ApiService> logger)
         {
             _clientFactory = clientFactory;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         private HttpClient GetClient()
@@ -34,7 +36,7 @@ namespace SeedHR.Frontend.Services
             var context = _httpContextAccessor.HttpContext;
             if (context == null)
             {
-                Console.WriteLine("[ApiService] WARNING: HttpContext is null");
+                _logger.LogWarning("HttpContext is null");
                 return client;
             }
 
@@ -44,18 +46,18 @@ namespace SeedHR.Frontend.Services
                 if (!string.IsNullOrEmpty(token))
                 {
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                    Console.WriteLine("[ApiService] Token found and added to Authorization header");
+                    _logger.LogInformation("JWT token found and added to Authorization header");
                 }
                 else
                 {
-                    Console.WriteLine("[ApiService] WARNING: User is authenticated but Token claim is empty or null");
+                    _logger.LogWarning("User is authenticated but Token claim is empty or null");
                     var allClaims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
-                    Console.WriteLine($"[ApiService] Available claims: {allClaims}");
+                    _logger.LogDebug("Available claims: {Claims}", allClaims);
                 }
             }
             else
             {
-                Console.WriteLine("[ApiService] WARNING: User is not authenticated in HttpContext");
+                _logger.LogDebug("User is not authenticated in HttpContext");
             }
 
             return client;
