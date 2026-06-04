@@ -1,0 +1,316 @@
+@page
+@model SeedHR.Frontend.Pages.PerformanceModel
+@{
+    ViewData["Title"] = "Performans Değerlendirme & OKR";
+    var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
+    var isHrOrAdmin = userRole == "Admin" || userRole == "HR";
+}
+
+<!-- Alert banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-655" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-655" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<div class="space-y-6" x-data="{ showAddGoalModal: false, showAddEvalModal: false }">
+
+    <!-- Filters & Action Bar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 border border-slate-100 rounded-3xl shadow-sm">
+        
+        <!-- Employee Selector for HR/Admin -->
+        <div class="w-full sm:w-auto text-left">
+            @if (isHrOrAdmin)
+            {
+                <form method="get" class="flex items-center gap-3 w-full sm:w-auto">
+                    <label class="text-xs font-semibold text-slate-500 shrink-0">Çalışan Seçin:</label>
+                    <select name="TargetUserId" onchange="this.form.submit()" 
+                            class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition w-full sm:w-56">
+                        <option value="">Benim Performansım</option>
+                        @foreach (var emp in Model.Employees ?? Enumerable.Empty<SeedHR.Frontend.Models.UserDto>())
+                        {
+                            <option value="@emp.Id" selected="@(Model.TargetUserId == emp.Id ? "selected" : null)">@emp.FullName</option>
+                        }
+                    </select>
+                </form>
+            }
+            else
+            {
+                <h3 class="text-sm font-bold text-slate-855 pl-2">Performans Özetiniz</h3>
+            }
+        </div>
+
+        <!-- Add Actions -->
+        @if (isHrOrAdmin)
+        {
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button @@click="showAddGoalModal = true" 
+                        class="flex-1 sm:flex-initial px-4 py-2 bg-indigo-50 border border-indigo-100 hover:border-transparent text-indigo-650 hover:bg-indigo-600 hover:text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                    <i class="fa-solid fa-bullseye"></i> Hedef Ekle
+                </button>
+                <button @@click="showAddEvalModal = true" 
+                        class="flex-1 sm:flex-initial px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                    <i class="fa-solid fa-file-signature"></i> Değerlendir
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Main Content Panels: OKRs/Goals and Evaluations -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Performance Goals (Hedefler / OKRs) -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-slate-850 flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-indigo-605"></i> Performans Hedefleri (OKRs)
+                </h3>
+                <span class="text-[10px] text-indigo-650 font-bold">Toplam Ağırlık: @(Model.Goals?.Sum(g => g.Weight) ?? 0)%</span>
+            </div>
+
+            @if (Model.Goals == null || !Model.Goals.Any())
+            {
+                <div class="py-12 text-center text-slate-450 text-xs">
+                    Kayıtlı performans hedefi bulunmamaktadır.
+                </div>
+            }
+            else
+            {
+                <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                    @foreach (var goal in Model.Goals)
+                    {
+                        <div class="p-4 bg-slate-50 border border-slate-150 rounded-2xl flex flex-col gap-2 hover:border-indigo-100 transition">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-indigo-50 border border-indigo-100 text-indigo-655">
+                                    Ağırlık: %@goal.Weight
+                                </span>
+                                <span class="text-[9px] text-slate-500 font-semibold">Hedef Tarih: @goal.TargetDate.ToString("dd.MM.yyyy")</span>
+                            </div>
+                            <h4 class="text-xs font-bold text-slate-800">@goal.Title</h4>
+                            <p class="text-[11px] text-slate-550 font-medium">@goal.Description</p>
+                            
+                            <div class="flex items-center justify-between border-t border-slate-150 pt-2 mt-2">
+                                <div>
+                                    @if (goal.Status == "Pending")
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-650 text-[10px] font-semibold">Planlandı</span>
+                                    }
+                                    else if (goal.Status == "InProgress")
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-semibold">Devam Ediyor</span>
+                                    }
+                                    else if (goal.Status == "Achieved")
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-semibold">Başarıldı</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-100 text-rose-700 text-[10px] font-semibold">Başarılamadı</span>
+                                    }
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <form method="post" asp-page-handler="UpdateGoalStatus" class="inline">
+                                        <input type="hidden" name="id" value="@goal.Id" />
+                                        <input type="hidden" name="status" value="InProgress" />
+                                        <button type="submit" class="text-[9px] font-bold text-slate-550 hover:text-slate-805 px-2 py-1 bg-white border border-slate-200 rounded transition active:scale-[0.98]">Sürece Al</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="UpdateGoalStatus" class="inline">
+                                        <input type="hidden" name="id" value="@goal.Id" />
+                                        <input type="hidden" name="status" value="Achieved" />
+                                        <button type="submit" class="text-[9px] font-bold bg-emerald-50 border border-emerald-100 hover:border-transparent text-emerald-700 hover:bg-emerald-600 hover:text-white px-2 py-1 rounded transition active:scale-[0.98]">Tamamla</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Performance Evaluations (Değerlendirmeler / Reviews) -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-slate-850 flex items-center gap-2">
+                    <i class="fa-solid fa-file-signature text-emerald-600"></i> Değerlendirme Raporları
+                </h3>
+                <span class="text-[10px] text-slate-500 font-semibold">Son Dönem Değerlendirmeleri</span>
+            </div>
+
+            @if (Model.Evaluations == null || !Model.Evaluations.Any())
+            {
+                <div class="py-12 text-center text-slate-450 text-xs">
+                    Henüz yapılmış performans değerlendirmesi bulunmamaktadır.
+                </div>
+            }
+            else
+            {
+                <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                    @foreach (var eval in Model.Evaluations.OrderByDescending(e => e.EvaluationDate))
+                    {
+                        <div class="p-4 bg-slate-50 border border-slate-150 rounded-2xl flex flex-col gap-2 hover:border-indigo-100 transition">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-emerald-50 border border-emerald-100 text-emerald-700">
+                                    Dönem: @eval.Period
+                                </span>
+                                <span class="text-[9px] text-slate-500 font-semibold">@eval.EvaluationDate.ToString("dd.MM.yyyy")</span>
+                            </div>
+                            
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-semibold text-slate-500 shrink-0">Değerlendiren:</span>
+                                <span class="text-xs text-slate-805 font-bold">@(eval.EvaluatorName ?? "Yönetici")</span>
+                            </div>
+
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-semibold text-slate-500 shrink-0">Puan:</span>
+                                <div class="flex text-amber-400 gap-0.5">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="fa-solid fa-star text-xs @(i <= eval.Score ? "text-amber-400" : "text-slate-200")"></i>
+                                    }
+                                </div>
+                                <span class="text-xs font-bold text-slate-805">(@eval.Score / 5)</span>
+                            </div>
+
+                            <div class="border-t border-slate-150 pt-2 mt-2">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Yönetici Yorumu</p>
+                                <p class="text-xs text-slate-655 mt-1 font-medium font-medium">@eval.Comments</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Create Performance Goal Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/40 backdrop-blur-[4px] p-4" 
+         x-show="showAddGoalModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white border border-slate-150 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-850">Yeni OKR / Hedef Tanımla</h3>
+                <button class="text-slate-400 hover:text-slate-655" @@click="showAddGoalModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreateGoal" class="space-y-4">
+                <input type="hidden" name="TargetUserId" value="@Model.TargetUserId" />
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Hedef / OKR Başlığı</label>
+                    <input type="text" asp-for="NewGoal.Title" required placeholder="Örn: Q1 Müşteri Memnuniyeti Artışı" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ağırlık (%)</label>
+                        <input type="number" asp-for="NewGoal.Weight" required min="1" max="100" value="25" 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Hedef Tarih</label>
+                        <input type="date" asp-for="NewGoal.TargetDate" required 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Açıklama / Kriterler</label>
+                    <textarea asp-for="NewGoal.Description" required rows="3" placeholder="Başarı kriterlerini ve hedef detaylarını ekleyin..." 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-855 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-55 text-slate-500 text-xs font-bold rounded-xl transition"
+                            @@click="showAddGoalModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Kaydet</button>
+                </div>
+            </form>
+         </div>
+    </div>
+
+    <!-- Create Performance Evaluation Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/40 backdrop-blur-[4px] p-4" 
+         x-show="showAddEvalModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white border border-slate-150 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-850">Çalışan Değerlendirme Formu</h3>
+                <button class="text-slate-400 hover:text-slate-655" @@click="showAddEvalModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreateEvaluation" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Değerlendirilecek Çalışan</label>
+                    <select asp-for="NewEvaluation.UserId" required 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="">Çalışan Seçin</option>
+                        @foreach (var emp in Model.Employees ?? Enumerable.Empty<SeedHR.Frontend.Models.UserDto>())
+                        {
+                            <option value="@emp.Id">@emp.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Dönem</label>
+                        <select asp-for="NewEvaluation.Period" required 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="2026 Q1">2026 Q1</option>
+                            <option value="2026 Q2">2026 Q2</option>
+                            <option value="2026 Yıllık">2026 Yıllık</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Puan (1 - 5)</label>
+                        <select asp-for="NewEvaluation.Score" required 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="5">5 - Mükemmel</option>
+                            <option value="4">4 - Çok İyi</option>
+                            <option value="3">3 - Ortalama</option>
+                            <option value="2">2 - Zayıf</option>
+                            <option value="1">1 - Yetersiz</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Yorumlar / Geri Bildirim</label>
+                    <textarea asp-for="NewEvaluation.Comments" required rows="3" placeholder="Detaylı performans değerlendirme yorumlarınızı girin..." 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-55 text-slate-500 text-xs font-bold rounded-xl transition"
+                            @@click="showAddEvalModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Formu Kaydet</button>
+                </div>
+            </form>
+         </div>
+    </div>
+
+</div>

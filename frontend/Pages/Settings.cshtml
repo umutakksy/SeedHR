@@ -1,0 +1,469 @@
+@page
+@model SeedHR.Frontend.Pages.SettingsModel
+@{
+    ViewData["Title"] = "Şirket Ayarları";
+}
+
+<!-- Alert banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-400"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<div class="space-y-6" x-data="{ 
+    activeTab: 'departments',
+    showAddDeptModal: false,
+    showEditDeptModal: false,
+    showAddPosModal: false,
+    showEditPosModal: false,
+    
+    // Dept Edit State
+    editDeptId: '',
+    editDeptName: '',
+    editDeptCode: '',
+    editDeptDesc: '',
+    editDeptManagerId: '',
+    editDeptIsActive: true,
+    
+    // Pos Edit State
+    editPosId: '',
+    editPosTitle: '',
+    editPosCode: '',
+    editPosDesc: '',
+    editPosDeptId: '',
+    editPosIsActive: true,
+    
+    openEditDept(dept) {
+        this.editDeptId = dept.id;
+        this.editDeptName = dept.name;
+        this.editDeptCode = dept.code;
+        this.editDeptDesc = dept.description || '';
+        this.editDeptManagerId = dept.managerId || '';
+        this.editDeptIsActive = dept.isActive;
+        this.showEditDeptModal = true;
+    },
+    
+    openEditPos(pos) {
+        this.editPosId = pos.id;
+        this.editPosTitle = pos.title;
+        this.editPosCode = pos.code;
+        this.editPosDesc = pos.description || '';
+        this.editPosDeptId = pos.departmentId;
+        this.editPosIsActive = pos.isActive;
+        this.showEditPosModal = true;
+    }
+}">
+
+    <!-- Tab Switcher and Trigger Controls -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 border border-slate-100 dark:border-zinc-800/80 rounded-3xl shadow-sm">
+        <div class="flex p-1 bg-slate-50 dark:bg-zinc-950 rounded-2xl border border-slate-200/50 dark:border-zinc-800/60 w-full sm:w-auto">
+            <button @@click="activeTab = 'departments'" 
+                    :class="activeTab === 'departments' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'" 
+                    class="flex-1 sm:flex-initial px-6 py-2 rounded-xl text-xs transition duration-150 flex items-center justify-center gap-2 font-semibold">
+                <i class="fa-solid fa-sitemap"></i> Departmanlar
+            </button>
+            <button @@click="activeTab = 'positions'" 
+                    :class="activeTab === 'positions' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'" 
+                    class="flex-1 sm:flex-initial px-6 py-2 rounded-xl text-xs transition duration-150 flex items-center justify-center gap-2 font-semibold">
+                <i class="fa-solid fa-id-card"></i> Pozisyonlar
+            </button>
+        </div>
+
+        <div class="w-full sm:w-auto">
+            <!-- Create buttons based on active tab -->
+            <button x-show="activeTab === 'departments'" @@click="showAddDeptModal = true" 
+                    class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                <i class="fa-solid fa-plus"></i> Departman Ekle
+            </button>
+            <button x-show="activeTab === 'positions'" @@click="showAddPosModal = true" 
+                    class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                <i class="fa-solid fa-plus"></i> Pozisyon Ekle
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 1: Departman Yönetimi -->
+    <div x-show="activeTab === 'departments'" x-transition class="glass-card rounded-3xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/60 dark:border-zinc-800/85 text-[10px] font-bold text-slate-450 dark:text-zinc-400 uppercase bg-slate-50/50 dark:bg-zinc-950/20">
+                        <th class="px-6 py-3.5">Kod</th>
+                        <th class="px-6 py-3.5">Departman Adı</th>
+                        <th class="px-6 py-3.5">Yönetici</th>
+                        <th class="px-6 py-3.5">Çalışan Sayısı</th>
+                        <th class="px-6 py-3.5">Durum</th>
+                        <th class="px-6 py-3.5 text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                    @if (Model.Departments == null || !Model.Departments.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-xs text-slate-450">
+                                Kayıtlı departman bulunamadı.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var dept in Model.Departments)
+                        {
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition duration-150">
+                                <td class="px-6 py-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">@dept.Code</td>
+                                <td class="px-6 py-4 text-xs font-bold text-slate-800 dark:text-white">@dept.Name</td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">@(dept.ManagerName ?? "Belirtilmedi")</td>
+                                <td class="px-6 py-4 text-xs font-bold text-slate-700 dark:text-zinc-300">@dept.EmployeeCount Kişi</td>
+                                <td class="px-6 py-4 text-xs">
+                                    @if (dept.IsActive)
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 text-slate-500 dark:text-zinc-450 text-[10px] font-semibold">Pasif</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <button @@click="openEditDept({
+                                            id: '@dept.Id',
+                                            name: '@dept.Name',
+                                            code: '@dept.Code',
+                                            description: '@dept.Description',
+                                            managerId: '@dept.ManagerId',
+                                            isActive: @(dept.IsActive ? "true" : "false")
+                                        })" class="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition" title="Düzenle">
+                                            <i class="fa-solid fa-pen text-xs"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="DeleteDepartment" asp-route-id="@dept.Id" class="inline" onsubmit="return confirm('Bu departmanı silmek istediğinize emin misiniz?')">
+                                            <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 transition" title="Sil">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Pozisyon Yönetimi -->
+    <div x-show="activeTab === 'positions'" x-transition class="glass-card rounded-3xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/60 dark:border-zinc-800/85 text-[10px] font-bold text-slate-450 dark:text-zinc-400 uppercase bg-slate-50/50 dark:bg-zinc-950/20">
+                        <th class="px-6 py-3.5">Kod</th>
+                        <th class="px-6 py-3.5">Pozisyon Unvanı</th>
+                        <th class="px-6 py-3.5">Departman</th>
+                        <th class="px-6 py-3.5">Çalışan Sayısı</th>
+                        <th class="px-6 py-3.5">Durum</th>
+                        <th class="px-6 py-3.5 text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                    @if (Model.Positions == null || !Model.Positions.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-xs text-slate-450">
+                                Kayıtlı pozisyon bulunamadı.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var pos in Model.Positions)
+                        {
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition duration-150">
+                                <td class="px-6 py-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">@pos.Code</td>
+                                <td class="px-6 py-4 text-xs font-bold text-slate-800 dark:text-white">@pos.Title</td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">@pos.DepartmentName</td>
+                                <td class="px-6 py-4 text-xs font-bold text-slate-700 dark:text-zinc-300">@pos.EmployeeCount Kişi</td>
+                                <td class="px-6 py-4 text-xs">
+                                    @if (pos.IsActive)
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 text-slate-500 dark:text-zinc-450 text-[10px] font-semibold">Pasif</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <button @@click="openEditPos({
+                                            id: '@pos.Id',
+                                            title: '@pos.Title',
+                                            code: '@pos.Code',
+                                            description: '@pos.Description',
+                                            departmentId: '@pos.DepartmentId',
+                                            isActive: @(pos.IsActive ? "true" : "false")
+                                        })" class="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition" title="Düzenle">
+                                            <i class="fa-solid fa-pen text-xs"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="DeletePosition" asp-route-id="@pos.Id" class="inline" onsubmit="return confirm('Bu pozisyonu silmek istediğinize emin misiniz?')">
+                                            <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 transition" title="Sil">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Department Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showAddDeptModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Yeni Departman Ekle</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showAddDeptModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreateDepartment" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Kodu</label>
+                    <input type="text" asp-for="NewDept.Code" required placeholder="Örn: HR, RND, SALES" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Adı</label>
+                    <input type="text" asp-for="NewDept.Name" required placeholder="Örn: İnsan Kaynakları" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Yöneticisi</label>
+                    <select asp-for="NewDept.ManagerId" 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="">Yönetici Atama</option>
+                        @foreach (var emp in Model.Employees)
+                        {
+                            <option value="@emp.Id">@emp.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Açıklama</label>
+                    <textarea asp-for="NewDept.Description" rows="2" placeholder="Departman sorumlulukları..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-405 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showAddDeptModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition active:scale-[0.99]">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Department Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showEditDeptModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Departman Düzenle</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showEditDeptModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="UpdateDepartment" class="space-y-4">
+                <input type="hidden" name="EditDeptId" x-model="editDeptId" />
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Kodu</label>
+                    <input type="text" name="EditDept.Code" x-model="editDeptCode" required 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Adı</label>
+                    <input type="text" name="EditDept.Name" x-model="editDeptName" required 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman Yöneticisi</label>
+                    <select name="EditDept.ManagerId" x-model="editDeptManagerId" 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="">Yönetici Yok</option>
+                        @foreach (var emp in Model.Employees)
+                        {
+                            <option value="@emp.Id">@emp.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Açıklama</label>
+                    <textarea name="EditDept.Description" x-model="editDeptDesc" rows="2" 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Durum</label>
+                    <select name="EditDept.IsActive" x-model="editDeptIsActive" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option :value="true">Aktif</option>
+                        <option :value="false">Pasif</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showEditDeptModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Position Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showAddPosModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Yeni Pozisyon Tanımla</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showAddPosModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreatePosition" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman</label>
+                    <select asp-for="NewPos.DepartmentId" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="">Departman Seçin</option>
+                        @foreach (var dept in Model.Departments ?? new List<DepartmentDto>())
+                        {
+                            <option value="@dept.Id">@dept.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Pozisyon Kodu</label>
+                    <input type="text" asp-for="NewPos.Code" required placeholder="Örn: SNR_DEV, JR_HR" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Pozisyon Unvanı</label>
+                    <input type="text" asp-for="NewPos.Title" required placeholder="Örn: Senior Software Developer" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Açıklama</label>
+                    <textarea asp-for="NewPos.Description" rows="2" placeholder="Rol gereksinimleri..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-405 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showAddPosModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition active:scale-[0.99]">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Position Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showEditPosModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Pozisyon Düzenle</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showEditPosModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="UpdatePosition" class="space-y-4">
+                <input type="hidden" name="EditPosId" x-model="editPosId" />
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Departman</label>
+                    <select name="EditPos.DepartmentId" x-model="editPosDeptId" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        @foreach (var dept in Model.Departments ?? new List<DepartmentDto>())
+                        {
+                            <option value="@dept.Id">@dept.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Pozisyon Kodu</label>
+                    <input type="text" name="EditPos.Code" x-model="editPosCode" required 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Pozisyon Unvanı</label>
+                    <input type="text" name="EditPos.Title" x-model="editPosTitle" required 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Açıklama</label>
+                    <textarea name="EditPos.Description" x-model="editPosDesc" rows="2" 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Durum</label>
+                    <select name="EditPos.IsActive" x-model="editPosIsActive" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option :value="true">Aktif</option>
+                        <option :value="false">Pasif</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showEditPosModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,235 @@
+@page
+@model SeedHR.Frontend.Pages.IndexModel
+@{
+    ViewData["Title"] = "Gösterge Paneli";
+}
+
+<!-- Notification banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400 text-lg"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-400 text-lg"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    
+    <!-- Toplam Çalışan -->
+    <div class="glass-card rounded-3xl p-6 flex items-center justify-between shadow-sm transition duration-300">
+        <div>
+            <p class="text-xs font-semibold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Toplam Çalışan</p>
+            <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">@Model.Stats.TotalEmployees</p>
+            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                <i class="fa-solid fa-circle-plus mr-1"></i> Bu ay +@Model.Stats.NewEmployeesThisMonth yeni çalışan
+            </p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-users"></i>
+        </div>
+    </div>
+
+    <!-- Bekleyen İzinler -->
+    <div class="glass-card rounded-3xl p-6 flex items-center justify-between shadow-sm transition duration-300">
+        <div>
+            <p class="text-xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Onay Bekleyen İzinler</p>
+            <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">@Model.Stats.PendingLeaveRequests</p>
+            <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                <i class="fa-solid fa-clock mr-1"></i> HR onayı bekliyor
+            </p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/80 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-calendar-minus"></i>
+        </div>
+    </div>
+
+    <!-- Açık Pozisyonlar -->
+    <div class="glass-card rounded-3xl p-6 flex items-center justify-between shadow-sm transition duration-300">
+        <div>
+            <p class="text-xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Açık İlanlar</p>
+            <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">@Model.Stats.OpenJobPostings</p>
+            <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                <i class="fa-solid fa-briefcase mr-1"></i> Aktif iş başvuruları
+            </p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-clipboard-list"></i>
+        </div>
+    </div>
+
+    <!-- Bugün Katılım Oranı -->
+    <div class="glass-card rounded-3xl p-6 flex items-center justify-between shadow-sm transition duration-300">
+        <div>
+            <p class="text-xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Bugün Katılım Oranı</p>
+            <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">%@Model.Stats.AttendanceRateToday</p>
+            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                <i class="fa-solid fa-circle-check mr-1"></i> Giriş yapmış çalışanlar
+            </p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-business-time"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Main Grid Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left & Center Panel: Quick Actions & Announcements -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Hızlı Giriş Çıkış (Quick Punch) -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-4">Mesai Giriş/Çıkış Sistemi</h2>
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-800/60 rounded-2xl">
+                <div class="flex items-center gap-3">
+                    <span class="p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg animate-pulse">
+                        <i class="fa-solid fa-business-time"></i>
+                    </span>
+                    <div class="text-left">
+                        <h4 class="text-sm font-bold text-slate-850 dark:text-white">Çalışma Saati Kaydı</h4>
+                        <p class="text-xs text-slate-450 dark:text-slate-400 mt-0.5">Günlük mesainizi başlatın veya sonlandırın.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <form method="post" asp-page-handler="CheckIn" class="w-full sm:w-auto">
+                        <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                            <i class="fa-solid fa-right-to-bracket"></i> Giriş Yap (Punch In)
+                        </button>
+                    </form>
+                    <form method="post" asp-page-handler="CheckOut" class="w-full sm:w-auto">
+                        <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                            <i class="fa-solid fa-right-from-bracket"></i> Çıkış Yap (Punch Out)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Son Duyurular -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-bold text-slate-800 dark:text-white">Son Duyurular</h2>
+                <a href="/Announcements" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">Hepsini Gör</a>
+            </div>
+            
+            @if (Model.Stats.RecentAnnouncements == null || !Model.Stats.RecentAnnouncements.Any())
+            {
+                <div class="p-6 text-center text-slate-450 dark:text-slate-500 text-xs">
+                    <i class="fa-solid fa-bullhorn text-2xl mb-2 block text-slate-300 dark:text-slate-600"></i>
+                    Yayınlanmış duyuru bulunmamaktadır.
+                </div>
+            }
+            else
+            {
+                <div class="space-y-4">
+                    @foreach (var announcement in Model.Stats.RecentAnnouncements.Take(3))
+                    {
+                        <div class="p-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800/80 rounded-2xl flex flex-col gap-2 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition duration-150 text-left">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+                                    @announcement.Category
+                                </span>
+                                <span class="text-[10px] text-slate-400">
+                                    <i class="fa-solid fa-calendar mr-1"></i> @announcement.PublishedDate.ToString("dd.MM.yyyy")
+                                </span>
+                            </div>
+                            <h3 class="text-sm font-bold text-slate-800 dark:text-white">@announcement.Title</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 font-medium">@announcement.Content</p>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Right Panel: Birthday & Leave Calendar info -->
+    <div class="space-y-6">
+        
+        <!-- Yaklaşan Doğum Günleri -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-4">🎈 Yaklaşan Doğum Günleri</h2>
+            
+            @if (Model.Stats.UpcomingBirthdays == null || !Model.Stats.UpcomingBirthdays.Any())
+            {
+                <div class="p-6 text-center text-slate-450 dark:text-slate-500 text-xs">
+                    Bu ay doğum günü olan kimse bulunmuyor.
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    @foreach (var birthday in Model.Stats.UpcomingBirthdays.Take(4))
+                    {
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800/60 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/30 text-pink-650 dark:text-pink-400 flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-cake-candles"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h4 class="text-xs font-bold text-slate-850 dark:text-white">@birthday.EmployeeName</h4>
+                                    <p class="text-[10px] text-slate-450 dark:text-slate-400">@birthday.DateOfBirth.ToString("dd MMMM")</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-bold text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/20">
+                                @birthday.DaysUntilBirthday Gün kaldı
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Yaklaşan İzinler -->
+        <div class="glass-card rounded-3xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-4">🌴 İzinli Olanlar / Yaklaşanlar</h2>
+            
+            @if (Model.Stats.UpcomingLeaves == null || !Model.Stats.UpcomingLeaves.Any())
+            {
+                <div class="p-6 text-center text-slate-450 dark:text-slate-500 text-xs">
+                    Yakında izne çıkacak kimse bulunmuyor.
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    @foreach (var leave in Model.Stats.UpcomingLeaves.Take(4))
+                    {
+                        <div class="p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800/60 rounded-xl text-left flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-850 dark:text-white">@leave.EmployeeName</h4>
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                    @leave.LeaveType
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-[10px] text-slate-450 dark:text-slate-400">
+                                <span>@leave.StartDate.ToString("dd.MM") - @leave.EndDate.ToString("dd.MM")</span>
+                                <span class="font-bold text-slate-800 dark:text-white">@leave.Days Gün</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+    </div>
+</div>

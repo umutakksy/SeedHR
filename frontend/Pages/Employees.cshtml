@@ -1,0 +1,611 @@
+@page
+@model SeedHR.Frontend.Pages.EmployeesModel
+@{
+    ViewData["Title"] = "Çalışan Yönetimi";
+    var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
+    var isHrOrAdmin = userRole == "Admin" || userRole == "HR";
+}
+
+<!-- Alert banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-400"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<div class="space-y-6" x-data="{ 
+    searchQuery: '', 
+    selectedDept: '', 
+    showAddModal: false, 
+    showEditModal: false,
+    editEmpId: '',
+    editFirstName: '',
+    editLastName: '',
+    editEmail: '',
+    editPhone: '',
+    editDob: '',
+    editGender: '',
+    editIdentityNumber: '',
+    editAddress: '',
+    editCity: '',
+    editCountry: '',
+    editDepartmentId: '',
+    editPositionId: '',
+    editHireDate: '',
+    editEmergencyName: '',
+    editEmergencyPhone: '',
+    editIsActive: true,
+    
+    openEdit(emp) {
+        this.editEmpId = emp.id;
+        this.editFirstName = emp.firstName;
+        this.editLastName = emp.lastName;
+        this.editEmail = emp.email;
+        this.editPhone = emp.phone;
+        this.editDob = emp.dateOfBirth ? emp.dateOfBirth.substring(0, 10) : '';
+        this.editGender = emp.gender;
+        this.editIdentityNumber = emp.identityNumber;
+        this.editAddress = emp.address || '';
+        this.editCity = emp.city || '';
+        this.editCountry = emp.country || '';
+        this.editDepartmentId = emp.departmentId || '';
+        this.editPositionId = emp.positionId || '';
+        this.editHireDate = emp.hireDate ? emp.hireDate.substring(0, 10) : '';
+        this.editEmergencyName = emp.emergencyContactName || '';
+        this.editEmergencyPhone = emp.emergencyContactPhone || '';
+        this.editIsActive = emp.isActive;
+        this.showEditModal = true;
+    }
+}">
+
+    <!-- Filter and Actions Bar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 border border-slate-100 dark:border-zinc-800/80 rounded-3xl shadow-sm">
+        <!-- Search and Department Filter -->
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" x-model="searchQuery" placeholder="Çalışan ara (Ad, Soyad, E-posta)..." 
+                       class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800/80 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+
+            <select x-model="selectedDept" 
+                    class="w-full sm:w-48 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800/80 rounded-xl py-2 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                <option value="">Tüm Departmanlar</option>
+                @foreach (var dept in Model.Departments)
+                {
+                    <option value="@dept.Id">@dept.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (isHrOrAdmin)
+        {
+            <button @@click="showAddModal = true" 
+                    class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 shrink-0 active:scale-[0.99]">
+                <i class="fa-solid fa-plus"></i> Yeni Çalışan Ekle
+            </button>
+        }
+    </div>
+
+    <!-- Main Content Area: Directory & Detail view side-by-side -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        
+        <!-- Employees Directory -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/60 bg-slate-50/50 dark:bg-zinc-950/20 flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">Çalışan Listesi</h3>
+                    <span class="text-[10px] text-slate-500 dark:text-zinc-400 font-bold">Toplam @Model.Employees.Count çalışan</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200/60 dark:border-zinc-800/85 text-[10px] font-bold text-slate-455 dark:text-zinc-400 uppercase bg-slate-55/20 dark:bg-zinc-950/20">
+                                <th class="px-6 py-3.5">Çalışan</th>
+                                <th class="px-6 py-3.5">Pozisyon / Departman</th>
+                                <th class="px-6 py-3.5">İletişim</th>
+                                <th class="px-6 py-3.5">Durum</th>
+                                <th class="px-6 py-3.5 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                            @foreach (var emp in Model.Employees)
+                            {
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition duration-150" 
+                                    x-show="(searchQuery === '' || '@emp.FullName'.toLowerCase().includes(searchQuery.toLowerCase()) || '@emp.Email'.toLowerCase().includes(searchQuery.toLowerCase())) && (selectedDept === '' || '@emp.DepartmentId' === selectedDept)">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                                                @emp.FullName.Substring(0, Math.Min(2, emp.FullName.Length)).ToUpper()
+                                            </div>
+                                            <div class="text-left">
+                                                <p class="text-xs font-bold text-slate-800 dark:text-white">@emp.FullName</p>
+                                                <p class="text-[10px] text-slate-400 mt-0.5">T.C: @emp.IdentityNumber</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-xs text-left">
+                                        <p class="font-bold text-slate-700 dark:text-zinc-300">@emp.PositionTitle</p>
+                                        <p class="text-[10px] text-slate-500 mt-0.5">@emp.DepartmentName</p>
+                                    </td>
+                                    <td class="px-6 py-4 text-[11px] text-slate-500 dark:text-zinc-400 text-left">
+                                        <p class="font-medium"><i class="fa-solid fa-envelope mr-1.5 text-slate-400 text-xs"></i>@emp.Email</p>
+                                        <p class="mt-0.5 font-medium"><i class="fa-solid fa-phone mr-1.5 text-slate-400 text-xs"></i>@emp.Phone</p>
+                                    </td>
+                                    <td class="px-6 py-4 text-xs">
+                                        @if (emp.IsActive)
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 text-slate-500 dark:text-zinc-450 text-[10px] font-semibold">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Pasif
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            <a href="/Employees?detailId=@emp.Id" 
+                                               class="p-1.5 text-slate-400 hover:text-indigo-650 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition" title="Detaylar & Evraklar">
+                                                <i class="fa-solid fa-folder-open text-xs"></i>
+                                            </a>
+                                            @if (isHrOrAdmin)
+                                            {
+                                                <button @@click="openEdit({
+                                                    id: '@emp.Id',
+                                                    firstName: '@emp.FirstName',
+                                                    lastName: '@emp.LastName',
+                                                    email: '@emp.Email',
+                                                    phone: '@emp.Phone',
+                                                    dateOfBirth: '@emp.DateOfBirth.ToString("yyyy-MM-dd")',
+                                                    gender: '@emp.Gender',
+                                                    identityNumber: '@emp.IdentityNumber',
+                                                    address: '@emp.Address',
+                                                    city: '@emp.City',
+                                                    country: '@emp.Country',
+                                                    departmentId: '@emp.DepartmentId',
+                                                    positionId: '@emp.PositionId',
+                                                    hireDate: '@(emp.HireDate?.ToString("yyyy-MM-dd") ?? "")',
+                                                    emergencyContactName: '@emp.EmergencyContactName',
+                                                    emergencyContactPhone: '@emp.EmergencyContactPhone',
+                                                    isActive: @(emp.IsActive ? "true" : "false")
+                                                })" class="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition" title="Düzenle">
+                                                    <i class="fa-solid fa-pen text-xs"></i>
+                                                </button>
+                                                <form method="post" asp-page-handler="Delete" asp-route-id="@emp.Id" class="inline" onsubmit="return confirm('Bu çalışanı silmek istediğinize emin misiniz? (Pasifleştirilecektir)')">
+                                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition" title="Sil">
+                                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Employee Details & Documents Card -->
+        <div class="lg:col-span-1">
+            @if (Model.SelectedEmployee != null)
+            {
+                <div class="glass-card rounded-3xl p-6 shadow-sm border-indigo-500/10 space-y-6">
+                    <!-- Profile Intro -->
+                    <div class="text-center relative">
+                        <a href="/Employees" class="absolute left-0 top-0 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-xs font-bold transition">
+                            <i class="fa-solid fa-chevron-left mr-1"></i> Geri
+                        </a>
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xl mx-auto shadow-sm">
+                            @Model.SelectedEmployee.FullName.Substring(0, Math.Min(2, Model.SelectedEmployee.FullName.Length)).ToUpper()
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white mt-3">@Model.SelectedEmployee.FullName</h4>
+                        <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">@Model.SelectedEmployee.PositionTitle / @Model.SelectedEmployee.DepartmentName</p>
+                    </div>
+
+                    <!-- Personal Info Details -->
+                    <div class="space-y-2 border-t border-slate-100 dark:border-zinc-800/80 pt-4 text-xs text-left">
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">E-posta:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.Email</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">Telefon:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.Phone</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">Doğum Tarihi:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.DateOfBirth.ToString("dd.MM.yyyy")</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">Cinsiyet:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.Gender</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">İşe Giriş:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.HireDate?.ToString("dd.MM.yyyy")</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">Adres:</span><span class="text-slate-800 dark:text-zinc-250 truncate max-w-[150px] font-bold" title="@Model.SelectedEmployee.Address">@Model.SelectedEmployee.Address, @Model.SelectedEmployee.City</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400 font-semibold">Acil Durum:</span><span class="text-slate-800 dark:text-zinc-250 font-bold">@Model.SelectedEmployee.EmergencyContactName (@Model.SelectedEmployee.EmergencyContactPhone)</span></div>
+                    </div>
+
+                    <!-- Documents Module -->
+                    <div class="border-t border-slate-100 dark:border-zinc-800/80 pt-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h5 class="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">Özlük Evrakları</h5>
+                            <span class="text-[9px] text-slate-500 dark:text-zinc-550 font-bold">@Model.SelectedEmployeeDocuments.Count belge</span>
+                        </div>
+
+                        <!-- Documents List -->
+                        @if (!Model.SelectedEmployeeDocuments.Any())
+                        {
+                            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950/60 border border-slate-250 dark:border-zinc-800/80 text-center text-[10px] text-slate-450">
+                                <i class="fa-solid fa-folder-open mb-1.5 block text-lg text-slate-350 dark:text-zinc-700"></i>
+                                Henüz evrak yüklenmemiş.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="space-y-2">
+                                @foreach (var doc in Model.SelectedEmployeeDocuments)
+                                {
+                                    <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-zinc-950/60 border border-slate-150 dark:border-zinc-800/80 rounded-xl hover:border-indigo-150 dark:hover:border-indigo-900/30 transition">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 text-indigo-650 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0">
+                                                <i class="fa-solid fa-file-pdf"></i>
+                                            </div>
+                                            <div class="min-w-0 text-left">
+                                                <h6 class="text-[11px] font-bold text-slate-800 dark:text-white truncate max-w-[120px]" title="@doc.FileName">@doc.FileName</h6>
+                                                <p class="text-[9px] text-slate-450 dark:text-zinc-500 font-medium">@doc.DocumentType • @(doc.FileSize / 1024) KB</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <a href="/Employees?handler=DownloadDocument&id=@doc.Id&fileName=@doc.FileName" 
+                                               class="p-1 text-slate-400 hover:text-indigo-650 transition" title="İndir">
+                                                <i class="fa-solid fa-download text-xs"></i>
+                                            </a>
+                                            @if (isHrOrAdmin)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteDocument" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?')">
+                                                    <input type="hidden" name="documentId" value="@doc.Id" />
+                                                    <input type="hidden" name="targetUserId" value="@Model.SelectedEmployee.Id" />
+                                                    <button type="submit" class="p-1 text-slate-400 hover:text-rose-650 transition" title="Sil">
+                                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Upload Document Form -->
+                        @if (isHrOrAdmin)
+                        {
+                            <form method="post" asp-page-handler="UploadDocument" enctype="multipart/form-data" class="p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800/80 rounded-2xl space-y-3">
+                                <input type="hidden" name="targetUserId" value="@Model.SelectedEmployee.Id" />
+                                
+                                <div class="text-left">
+                                    <label class="block text-[9px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Belge Türü</label>
+                                    <select name="documentType" required 
+                                            class="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg py-1.5 px-2 text-[10px] text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                                        <option value="CV">Özgeçmiş (CV)</option>
+                                        <option value="Diploma">Diploma / Sertifika</option>
+                                        <option value="Kimlik">Kimlik Fotokopisi</option>
+                                        <option value="Sözleşme">İş Sözleşmesi</option>
+                                        <option value="Sağlık">Sağlık Raporu</option>
+                                        <option value="Diğer">Diğer Evraklar</option>
+                                    </select>
+                                </div>
+
+                                <div class="text-left">
+                                    <label class="block text-[9px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Dosya Seçin</label>
+                                    <input type="file" name="documentFile" required 
+                                            class="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg py-1 px-1.5 text-[10px] text-slate-800 dark:text-zinc-350 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                                </div>
+
+                                <button type="submit" 
+                                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-2 rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1 active:scale-[0.99]">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Belge Yükle
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="glass-card rounded-3xl p-8 text-center text-slate-450 text-xs">
+                    <i class="fa-solid fa-folder-open text-3xl mb-3 block text-slate-300 dark:text-zinc-700"></i>
+                    Belge ve detay yönetimini görüntülemek için çalışan listesinden bir çalışanın <span class="font-bold text-slate-500 dark:text-zinc-400">detay butonuna (<i class="fa-solid fa-folder-open mx-0.5"></i>)</span> tıklayın.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Create Employee Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showAddModal" x-transition x-cloak>
+         <div class="w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 max-h-[90vh] overflow-y-auto custom-scrollbar text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Yeni Çalışan Kaydı</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showAddModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="Create" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">AD</label>
+                        <input type="text" asp-for="NewEmployee.FirstName" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">SOYAD</label>
+                        <input type="text" asp-for="NewEmployee.LastName" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">E-POSTA</label>
+                        <input type="email" asp-for="NewEmployee.Email" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ŞİFRE</label>
+                        <input type="password" asp-for="NewEmployee.Password" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">TELEFON</label>
+                        <input type="text" asp-for="NewEmployee.Phone" required placeholder="0555..." 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">T.C. KİMLİK NO</label>
+                        <input type="text" asp-for="NewEmployee.IdentityNumber" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DOĞUM TARİHİ</label>
+                        <input type="date" asp-for="NewEmployee.DateOfBirth" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">CİNSİYET</label>
+                        <select asp-for="NewEmployee.Gender" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="Erkek">Erkek</option>
+                            <option value="Kadın">Kadın</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DEPARTMAN</label>
+                        <select asp-for="NewEmployee.DepartmentId" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="">Departman Seçin</option>
+                            @foreach (var dept in Model.Departments)
+                            {
+                                <option value="@dept.Id">@dept.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">POZİSYON</label>
+                        <select asp-for="NewEmployee.PositionId" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="">Pozisyon Seçin</option>
+                            @foreach (var pos in Model.Positions)
+                            {
+                                <option value="@pos.Id">@pos.Title</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">İŞE GİRİŞ TARİHİ</label>
+                        <input type="date" asp-for="NewEmployee.HireDate" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ŞEHİR</label>
+                        <input type="text" asp-for="NewEmployee.City" placeholder="Şehir" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ADRES DETAYI</label>
+                    <textarea asp-for="NewEmployee.Address" placeholder="Açık adres..." rows="2" 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ACİL DURUM KİŞİSİ</label>
+                        <input type="text" asp-for="NewEmployee.EmergencyContactName" placeholder="Ad Soyad" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ACİL DURUM TELEFON</label>
+                        <input type="text" asp-for="NewEmployee.EmergencyContactPhone" placeholder="Telefon" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showAddModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showEditModal" x-transition x-cloak>
+         <div class="w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 max-h-[90vh] overflow-y-auto custom-scrollbar text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Çalışan Bilgilerini Düzenle</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showEditModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="Update" class="space-y-4">
+                <input type="hidden" name="EditEmployeeId" x-model="editEmpId" />
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">AD</label>
+                        <input type="text" name="EditEmployee.FirstName" x-model="editFirstName" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">SOYAD</label>
+                        <input type="text" name="EditEmployee.LastName" x-model="editLastName" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">E-POSTA</label>
+                        <input type="email" name="EditEmployee.Email" x-model="editEmail" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">TELEFON</label>
+                        <input type="text" name="EditEmployee.Phone" x-model="editPhone" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DOĞUM TARİHİ</label>
+                        <input type="date" name="EditEmployee.DateOfBirth" x-model="editDob" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">CİNSİYET</label>
+                        <select name="EditEmployee.Gender" x-model="editGender" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="Erkek">Erkek</option>
+                            <option value="Kadın">Kadın</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">T.C. KİMLİK NO</label>
+                        <input type="text" name="EditEmployee.IdentityNumber" x-model="editIdentityNumber" required 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DURUM</label>
+                        <select name="EditEmployee.IsActive" x-model="editIsActive" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option :value="true">Aktif</option>
+                            <option :value="false">Pasif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DEPARTMAN</label>
+                        <select name="EditEmployee.DepartmentId" x-model="editDepartmentId" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="">Departman Seçin</option>
+                            @foreach (var dept in Model.Departments)
+                            {
+                                <option value="@dept.Id">@dept.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">POZİSYON</label>
+                        <select name="EditEmployee.PositionId" x-model="editPositionId" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="">Pozisyon Seçin</option>
+                            @foreach (var pos in Model.Positions)
+                            {
+                                <option value="@pos.Id">@pos.Title</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">İŞE GİRİŞ TARİHİ</label>
+                        <input type="date" name="EditEmployee.HireDate" x-model="editHireDate" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ŞEHİR</label>
+                        <input type="text" name="EditEmployee.City" x-model="editCity" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ADRES DETAYI</label>
+                    <textarea name="EditEmployee.Address" x-model="editAddress" rows="2" 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ACİL DURUM KİŞİSİ</label>
+                        <input type="text" name="EditEmployee.EmergencyContactName" x-model="editEmergencyName" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">ACİL DURUM TELEFON</label>
+                        <input type="text" name="EditEmployee.EmergencyContactPhone" x-model="editEmergencyPhone" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showEditModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>

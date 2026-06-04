@@ -1,0 +1,233 @@
+namespace SeedHR.Backend.Services.Implementations;
+
+using AutoMapper;
+using SeedHR.Backend.Exceptions;
+using SeedHR.Backend.Models.DTOs;
+using SeedHR.Backend.Models.Entities;
+using SeedHR.Backend.Repository.Interfaces;
+using SeedHR.Backend.Services.Interfaces;
+
+public class RecruitmentService : IRecruitmentService
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationService _notificationService;
+    private readonly IMapper _mapper;
+
+    public RecruitmentService(IUnitOfWork unitOfWork, INotificationService notificationService, IMapper mapper)
+    {
+        _unitOfWork = unitOfWork;
+        _notificationService = notificationService;
+        _mapper = mapper;
+    }
+
+    public async Task<CandidateDto> CreateCandidateAsync(CreateCandidateRequest request)
+    {
+        var candidate = new Candidate
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Phone = request.Phone,
+            Address = request.Address,
+            City = request.City,
+            Country = request.Country,
+            CoverLetter = request.CoverLetter,
+            AppliedDate = DateTime.UtcNow,
+            Status = "New"
+        };
+
+        var created = await _unitOfWork.Candidates.AddAsync(candidate);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<CandidateDto>(created);
+    }
+
+    public async Task<CandidateDto> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest request, string cvPath)
+    {
+        var candidate = new Candidate
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Phone = request.Phone,
+            Address = request.Address,
+            City = request.City,
+            Country = request.Country,
+            CoverLetter = request.CoverLetter,
+            CVPath = cvPath,
+            AppliedDate = DateTime.UtcNow,
+            Status = "New"
+        };
+
+        var application = new CandidateApplication
+        {
+            JobPostingId = jobPostingId,
+            ApplicationDate = DateTime.UtcNow,
+            Status = "Applied"
+        };
+
+        candidate.Applications.Add(application);
+
+        var created = await _unitOfWork.Candidates.AddAsync(candidate);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<CandidateDto>(created);
+    }
+
+    public async Task<CandidateDto> GetCandidateByIdAsync(string id)
+    {
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Candidate with ID {id} not found");
+        return _mapper.Map<CandidateDto>(candidate);
+    }
+
+    public async Task<IEnumerable<CandidateDto>> GetCandidatesAsync()
+    {
+        var candidates = await _unitOfWork.Candidates.GetAllAsync();
+        return _mapper.Map<IEnumerable<CandidateDto>>(candidates);
+    }
+
+    public async Task<JobPostingDto> CreateJobPostingAsync(CreateJobPostingRequest request)
+    {
+        var position = await _unitOfWork.Positions.GetByIdAsync(request.PositionId)
+            ?? throw new NotFoundException($"Position with ID {request.PositionId} not found");
+
+        var jobPosting = new JobPosting
+        {
+            PositionId = request.PositionId,
+            Title = request.Title,
+            Description = request.Description,
+            Requirements = request.Requirements,
+            PostedDate = DateTime.UtcNow,
+            Status = "Open",
+            NumberOfPositions = request.NumberOfPositions
+        };
+
+        var created = await _unitOfWork.JobPostings.AddAsync(jobPosting);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<JobPostingDto>(created);
+    }
+
+    public async Task<JobPostingDto> GetJobPostingByIdAsync(string id)
+    {
+        var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Job posting with ID {id} not found");
+        return _mapper.Map<JobPostingDto>(jobPosting);
+    }
+
+    public async Task<IEnumerable<JobPostingDto>> GetOpenJobPostingsAsync()
+    {
+        var jobPostings = await _unitOfWork.JobPostings.GetByStatusAsync("Open");
+        return _mapper.Map<IEnumerable<JobPostingDto>>(jobPostings);
+    }
+
+    public async Task<bool> CloseJobPostingAsync(string jobPostingId)
+    {
+        var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(jobPostingId)
+            ?? throw new NotFoundException($"Job posting with ID {jobPostingId} not found");
+
+        jobPosting.Status = "Closed";
+        jobPosting.ClosedDate = DateTime.UtcNow;
+
+        await _unitOfWork.JobPostings.UpdateAsync(jobPosting);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<IEnumerable<JobPostingDto>> GetJobPostingsAsync()
+    {
+        var postings = await _unitOfWork.JobPostings.GetAllAsync();
+        return _mapper.Map<IEnumerable<JobPostingDto>>(postings);
+    }
+
+    public async Task<InterviewDto> CreateInterviewAsync(CreateInterviewRequest request)
+    {
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(request.CandidateId)
+            ?? throw new NotFoundException($"Candidate with ID {request.CandidateId} not found");
+
+        var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(request.JobPostingId)
+            ?? throw new NotFoundException($"Job posting with ID {request.JobPostingId} not found");
+
+        var hrUser = (await _unitOfWork.Users.FindAsync(u => u.RoleId == "role_hr" || u.RoleId == "role_admin")).FirstOrDefault();
+        var interviewerId = hrUser?.Id ?? "default_interviewer";
+
+        var interview = new Interview
+        {
+            CandidateId = request.CandidateId,
+            Candidate = candidate,
+            InterviewerUserId = interviewerId,
+            InterviewerUser = hrUser,
+            JobPostingId = request.JobPostingId,
+            JobPosting = jobPosting,
+            ScheduledDate = request.ScheduledDate,
+            Type = request.Type,
+            Location = request.Location,
+            Status = "Scheduled"
+        };
+
+        var created = await _unitOfWork.Interviews.AddAsync(interview);
+        
+        candidate.Status = "Interviewing";
+        await _unitOfWork.Candidates.UpdateAsync(candidate);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<InterviewDto>(created);
+    }
+
+    public async Task<IEnumerable<InterviewDto>> GetInterviewsAsync()
+    {
+        var interviews = await _unitOfWork.Interviews.GetAllAsync();
+        foreach (var interview in interviews)
+        {
+            interview.Candidate = await _unitOfWork.Candidates.GetByIdAsync(interview.CandidateId);
+            interview.InterviewerUser = await _unitOfWork.Users.GetByIdAsync(interview.InterviewerUserId);
+            interview.JobPosting = await _unitOfWork.JobPostings.GetByIdAsync(interview.JobPostingId);
+        }
+        return _mapper.Map<IEnumerable<InterviewDto>>(interviews);
+    }
+
+    public async Task<InterviewDto> CompleteInterviewAsync(string id, CompleteInterviewRequest request)
+    {
+        var interview = await _unitOfWork.Interviews.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Interview with ID {id} not found");
+
+        interview.Status = "Completed";
+        interview.Rating = request.Rating;
+        interview.Feedback = request.Feedback;
+        interview.Result = request.Result;
+
+        var updated = await _unitOfWork.Interviews.UpdateAsync(interview);
+
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(interview.CandidateId);
+        if (candidate != null)
+        {
+            if (request.Result == "Pass")
+            {
+                candidate.Status = "Offered";
+            }
+            else if (request.Result == "Fail")
+            {
+                candidate.Status = "Rejected";
+            }
+            await _unitOfWork.Candidates.UpdateAsync(candidate);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+        return _mapper.Map<InterviewDto>(updated);
+    }
+
+    public async Task<CandidateDto> UpdateCandidateStatusAsync(string id, string status)
+    {
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Candidate with ID {id} not found");
+
+        candidate.Status = status;
+        var updated = await _unitOfWork.Candidates.UpdateAsync(candidate);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<CandidateDto>(updated);
+    }
+}

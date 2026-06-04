@@ -1,0 +1,552 @@
+@page
+@model SeedHR.Frontend.Pages.RecruitmentModel
+@{
+    ViewData["Title"] = "İşe Alım Portalı";
+    var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
+    var isHrOrAdmin = userRole == "Admin" || userRole == "HR";
+}
+
+<!-- Alert banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-400"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<div class="space-y-6" x-data="{ 
+    activeTab: 'postings',
+    showAddPostingModal: false,
+    showScheduleModal: false,
+    showEvaluationModal: false,
+    
+    // Plan state
+    candId: '',
+    candName: '',
+    
+    // Evaluation state
+    intId: '',
+    intCandName: '',
+    intJobTitle: '',
+    
+    openSchedule(candidate) {
+        this.candId = candidate.id;
+        this.candName = candidate.fullName;
+        this.showScheduleModal = true;
+    },
+    
+    openEvaluation(interview) {
+        this.intId = interview.id;
+        this.intCandName = interview.candidateName;
+        this.intJobTitle = interview.jobTitle;
+        this.showEvaluationModal = true;
+    }
+}">
+
+    <!-- Tab Switcher -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 border border-slate-100 dark:border-zinc-800/80 rounded-3xl shadow-sm">
+        <div class="flex p-1 bg-slate-50 dark:bg-zinc-950 rounded-2xl border border-slate-200/50 dark:border-zinc-800/60 w-full sm:w-auto">
+            <button @@click="activeTab = 'postings'" 
+                    :class="activeTab === 'postings' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'" 
+                    class="flex-1 sm:flex-initial px-5 py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 font-semibold">
+                <i class="fa-solid fa-clipboard-list"></i> İş İlanları
+            </button>
+            <button @@click="activeTab = 'candidates'" 
+                    :class="activeTab === 'candidates' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'" 
+                    class="flex-1 sm:flex-initial px-5 py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 font-semibold">
+                <i class="fa-solid fa-user-tie"></i> Başvurular
+            </button>
+            <button @@click="activeTab = 'interviews'" 
+                    :class="activeTab === 'interviews' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'" 
+                    class="flex-1 sm:flex-initial px-5 py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 font-semibold">
+                <i class="fa-solid fa-comments"></i> Mülakatlar
+            </button>
+        </div>
+
+        @if (isHrOrAdmin)
+        {
+            <div x-show="activeTab === 'postings'" class="w-full sm:w-auto">
+                <button @@click="showAddPostingModal = true" 
+                        class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                    <i class="fa-solid fa-plus"></i> Yeni İş İlanı Aç
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- TAB 1: İş İlanları -->
+    <div x-show="activeTab === 'postings'" x-transition class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @if (Model.JobPostings == null || !Model.JobPostings.Any())
+        {
+            <div class="md:col-span-3 glass-card rounded-3xl p-8 text-center text-slate-450 text-xs">
+                Açık veya kapalı iş ilanı bulunmamaktadır.
+            </div>
+        }
+        else
+        {
+            @foreach (var posting in Model.JobPostings)
+            {
+                <div class="glass-card rounded-3xl p-5 hover:border-indigo-200 dark:hover:border-indigo-900/60 transition duration-300 flex flex-col justify-between h-full text-left">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                İlan Tarihi: @posting.PostedDate.ToString("dd.MM.yyyy")
+                            </span>
+                            @if (posting.Status == "Active")
+                            {
+                                <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                    Aktif / Açık
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 text-slate-500 dark:text-zinc-400">
+                                    Kapalı (@posting.ClosedDate?.ToString("dd.MM.yyyy"))
+                                </span>
+                            }
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white">@posting.Title</h4>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400 line-clamp-3 font-medium">@posting.Description</p>
+                        
+                        <div class="pt-2">
+                            <h5 class="text-[10px] font-bold text-slate-450 dark:text-zinc-550 uppercase tracking-wider">Gereksinimler</h5>
+                            <p class="text-xs text-slate-600 dark:text-zinc-300 mt-1 font-medium">@posting.Requirements</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 dark:border-zinc-800/80 pt-4 mt-5 flex items-center justify-between">
+                        <div class="text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+                            <span>Aday Sayısı: <strong class="text-indigo-600 dark:text-indigo-400 font-bold">@posting.ApplicationCount</strong></span>
+                            <span class="mx-2 text-slate-200 dark:text-zinc-800">•</span>
+                            <span>Kadro: <strong class="text-slate-800 dark:text-white font-bold">@posting.NumberOfPositions</strong></span>
+                        </div>
+                        
+                        @if (isHrOrAdmin && posting.Status == "Active")
+                        {
+                            <form method="post" asp-page-handler="ClosePosting" asp-route-id="@posting.Id" onsubmit="return confirm('Bu iş ilanını kapatmak istediğinize emin misiniz?')">
+                                <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-transparent text-rose-600 hover:text-white text-[10px] font-bold rounded-lg transition active:scale-[0.98]">
+                                    İlanı Kapat
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- TAB 2: Aday Başvuruları -->
+    <div x-show="activeTab === 'candidates'" x-transition class="glass-card rounded-3xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/60 dark:border-zinc-800/85 text-[10px] font-bold text-slate-450 dark:text-zinc-400 uppercase bg-slate-50/50 dark:bg-zinc-950/20">
+                        <th class="px-6 py-3.5">Aday</th>
+                        <th class="px-6 py-3.5">İletişim</th>
+                        <th class="px-6 py-3.5">Başvuru Tarihi</th>
+                        <th class="px-6 py-3.5">Durum</th>
+                        <th class="px-6 py-3.5">Ön Yazı / CV</th>
+                        @if (isHrOrAdmin)
+                        {
+                            <th class="px-6 py-3.5 text-right">İşlemler</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                    @if (Model.Candidates == null || !Model.Candidates.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-xs text-slate-450">
+                                <i class="fa-solid fa-user-xmark text-2xl mb-2 block text-slate-300 dark:text-zinc-700"></i>
+                                Henüz iş başvurusu yapılmamıştır.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var candidate in Model.Candidates)
+                        {
+                            <tr class="hover:bg-slate-55/50 dark:hover:bg-zinc-900/30 transition duration-150">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg bg-pink-50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center font-bold text-[10px]">
+                                            @candidate.FullName.Substring(0, Math.Min(2, candidate.FullName.Length)).ToUpper()
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-800 dark:text-white">@candidate.FullName</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">
+                                    <p class="font-medium">@candidate.Email</p>
+                                    <p class="text-[10px] mt-0.5">@candidate.Phone</p>
+                                </td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400 font-medium">@candidate.AppliedDate.ToString("dd.MM.yyyy")</td>
+                                <td class="px-6 py-4 text-xs">
+                                    @if (candidate.Status == "Applied" || candidate.Status == "New")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px] font-semibold">Yeni Başvuru</span>
+                                    }
+                                    else if (candidate.Status == "Shortlisted")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-semibold">Aday Havuzunda</span>
+                                    }
+                                    else if (candidate.Status == "Interviewing" || candidate.Status == "Interviewed")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-55 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-semibold">Mülakat Aşamasında</span>
+                                    }
+                                    else if (candidate.Status == "Accepted" || candidate.Status == "Offered")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">Teklif Yapıldı</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-450 text-[10px] font-semibold">Reddedildi</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">
+                                    @if (!string.IsNullOrEmpty(candidate.CVPath))
+                                    {
+                                        <a href="/Employees?handler=DownloadDocument&id=@candidate.Id&fileName=CV_@(candidate.FullName.Replace(" ", "_")).pdf" 
+                                           class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold transition">
+                                            <i class="fa-solid fa-file-pdf"></i> CV İndir
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 dark:text-zinc-600 font-medium">Yüklenmemiş</span>
+                                    }
+                                    <p class="text-[9px] text-slate-450 dark:text-slate-500 mt-1 truncate max-w-[150px] font-medium" title="@candidate.CoverLetter">@candidate.CoverLetter</p>
+                                </td>
+                                @if (isHrOrAdmin)
+                                {
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <!-- Shortlist candidate -->
+                                            <form method="post" asp-page-handler="UpdateCandidateStatus" class="inline">
+                                                <input type="hidden" name="id" value="@candidate.Id" />
+                                                <input type="hidden" name="status" value="Shortlisted" />
+                                                <button type="submit" class="p-1.5 bg-amber-50 hover:bg-amber-600 border border-amber-100 hover:border-transparent text-amber-600 hover:text-white rounded-lg transition" title="Aday Havuzuna Al">
+                                                    <i class="fa-solid fa-star text-xs"></i>
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Schedule Interview Button -->
+                                            <button @@click="openSchedule({ id: '@candidate.Id', fullName: '@candidate.FullName' })" 
+                                                    class="p-1.5 bg-indigo-50 hover:bg-indigo-600 border border-indigo-100 hover:border-transparent text-indigo-600 hover:text-white rounded-lg transition" title="Mülakat Planla">
+                                                <i class="fa-solid fa-calendar-plus text-xs"></i>
+                                            </button>
+
+                                            <!-- Reject Candidate -->
+                                            <form method="post" asp-page-handler="UpdateCandidateStatus" class="inline" onsubmit="return confirm('Bu adayı reddetmek istediğinize emin misiniz?')">
+                                                <input type="hidden" name="id" value="@candidate.Id" />
+                                                <input type="hidden" name="status" value="Rejected" />
+                                                <button type="submit" class="p-1.5 bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-transparent text-rose-600 hover:text-white rounded-lg transition" title="Reddet">
+                                                    <i class="fa-solid fa-user-xmark text-xs"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: Mülakatlar -->
+    <div x-show="activeTab === 'interviews'" x-transition class="glass-card rounded-3xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/60 dark:border-zinc-800/85 text-[10px] font-bold text-slate-450 dark:text-zinc-400 uppercase bg-slate-50/50 dark:bg-zinc-950/20">
+                        <th class="px-6 py-3.5">Aday</th>
+                        <th class="px-6 py-3.5">Pozisyon / İlan</th>
+                        <th class="px-6 py-3.5">Mülakatçı</th>
+                        <th class="px-6 py-3.5">Mülakat Tarihi</th>
+                        <th class="px-6 py-3.5">Tür / Konum</th>
+                        <th class="px-6 py-3.5">Değerlendirme</th>
+                        <th class="px-6 py-3.5">Durum</th>
+                        @if (isHrOrAdmin)
+                        {
+                            <th class="px-6 py-3.5 text-right">İşlem</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                    @if (Model.Interviews == null || !Model.Interviews.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="px-6 py-8 text-center text-xs text-slate-455">
+                                <i class="fa-solid fa-comments text-2xl mb-2 block text-slate-300 dark:text-zinc-700"></i>
+                                Planlanmış mülakat bulunmamaktadır.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var interview in Model.Interviews)
+                        {
+                            <tr class="hover:bg-slate-55/50 dark:hover:bg-zinc-900/30 transition duration-150">
+                                <td class="px-6 py-4 text-xs font-bold text-slate-800 dark:text-white">@interview.CandidateName</td>
+                                <td class="px-6 py-4 text-xs text-slate-700 dark:text-zinc-300 font-bold">@interview.JobTitle</td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400 font-medium">@interview.InterviewerName</td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400 font-medium">@interview.ScheduledDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">
+                                    <p class="font-bold text-slate-700 dark:text-zinc-300">@interview.Type</p>
+                                    <p class="text-[10px] mt-0.5">@interview.Location</p>
+                                </td>
+                                <td class="px-6 py-4 text-xs">
+                                    @if (interview.Rating.HasValue)
+                                    {
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="flex text-amber-400 gap-0.5">
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <i class="fa-solid fa-star text-[10px] @(i <= interview.Rating.Value ? "text-amber-400" : "text-slate-200 dark:text-zinc-800")"></i>
+                                                }
+                                            </div>
+                                            <span class="text-[10px] text-slate-450 dark:text-zinc-500 font-bold">(@interview.Rating.Value/5)</span>
+                                        </div>
+                                        <p class="text-[9px] text-slate-450 dark:text-zinc-500 mt-1 max-w-[120px] truncate font-medium" title="@interview.Feedback">@interview.Feedback</p>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 dark:text-zinc-650 text-[10px] font-medium">Puanlanmadı</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-xs font-semibold">
+                                    @if (interview.Status == "Scheduled")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px]">Planlandı</span>
+                                    }
+                                    else if (interview.Status == "Completed")
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px]">Tamamlandı</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-105 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 text-[10px]">İptal Edildi</span>
+                                    }
+                                </td>
+                                @if (isHrOrAdmin)
+                                {
+                                    <td class="px-6 py-4 text-right">
+                                        @if (interview.Status == "Scheduled")
+                                        {
+                                            <button @@click="openEvaluation({
+                                                id: '@interview.Id',
+                                                candidateName: '@interview.CandidateName',
+                                                jobTitle: '@interview.JobTitle'
+                                            })" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg transition active:scale-[0.98]">
+                                                Değerlendir
+                                            </button>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Job Posting Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showAddPostingModal" x-transition x-cloak>
+         <div class="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Yeni İş İlanı Yayınla</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showAddPostingModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreatePosting" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">İlan Başlığı</label>
+                    <input type="text" asp-for="NewPosting.Title" required placeholder="Örn: Senior .NET Developer" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Kadro / Pozisyon</label>
+                        <select asp-for="NewPosting.PositionId" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="">Pozisyon Seçin</option>
+                            @foreach (var pos in Model.Positions)
+                            {
+                                <option value="@pos.Id">@pos.Title</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Alınacak Kişi Sayısı</label>
+                        <input type="number" asp-for="NewPosting.NumberOfPositions" required min="1" value="1" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Açıklama / İş Tanımı</label>
+                    <textarea asp-for="NewPosting.Description" required rows="3" placeholder="İş tanımını detaylıca yazın..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-405 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Aranan Nitelikler / Gereksinimler</label>
+                    <textarea asp-for="NewPosting.Requirements" required rows="3" placeholder="Örn: C#, ASP.NET MVC, MongoDB tecrübesi..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-405 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showAddPostingModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Yayınla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Schedule Interview Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showScheduleModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Mülakat Planla</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showScheduleModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CreateInterview" class="space-y-4">
+                <input type="hidden" name="NewInterview.CandidateId" x-model="candId" />
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Aday</label>
+                    <input type="text" x-model="candName" disabled 
+                           class="w-full bg-slate-50 border border-slate-200 dark:border-zinc-850 rounded-xl py-2.5 px-3 text-xs text-slate-500 dark:bg-zinc-900 focus:outline-none font-bold" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">İlgili İş İlanı</label>
+                    <select asp-for="NewInterview.JobPostingId" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="">İş İlanı Seçin</option>
+                        @foreach (var post in (Model.JobPostings ?? new List<JobPostingDto>()).Where(j => j.Status == "Active"))
+                        {
+                            <option value="@post.Id">@post.Title</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Mülakat Zamanı</label>
+                    <input type="datetime-local" asp-for="NewInterview.ScheduledDate" required 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Tür / Tip</label>
+                        <select asp-for="NewInterview.Type" required 
+                                class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                            <option value="Online">Online Görüşme</option>
+                            <option value="FaceToFace">Yüz Yüze Görüşme</option>
+                            <option value="Technical">Teknik Test / Case</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Konum / Link</label>
+                        <input type="text" asp-for="NewInterview.Location" placeholder="Teams link veya Ofis No" 
+                               class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showScheduleModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Planı Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Complete Evaluation Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showEvaluationModal" x-transition x-cloak>
+         <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Mülakat Değerlendirmesi</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showEvaluationModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="CompleteInterview" class="space-y-4">
+                <input type="hidden" name="TargetInterviewId" x-model="intId" />
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Aday & Pozisyon</label>
+                    <p class="text-xs font-bold text-slate-700 dark:text-zinc-300" x-text="intCandName + ' - ' + intJobTitle"></p>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Puan (1 - 5)</label>
+                    <select asp-for="Evaluation.Rating" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="5">5 - Mükemmel Aday</option>
+                        <option value="4">4 - Çok İyi</option>
+                        <option value="3">3 - Ortalama / Yeterli</option>
+                        <option value="2">2 - Zayıf</option>
+                        <option value="1">1 - Yetersiz</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Karar / Sonuç</label>
+                    <select asp-for="Evaluation.Result" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="Passed">Olumlu - Bir Sonraki Aşama</option>
+                        <option value="Failed">Olumsuz - Süreç Sonlandırıldı</option>
+                        <option value="Hired">Teklif Yap / İşe Al</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Görüşme Notları / Geri Bildirim</label>
+                    <textarea asp-for="Evaluation.Feedback" required rows="3" placeholder="Aday hakkındaki teknik ve kişisel görüşlerinizi buraya ekleyin..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-405 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-850 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showEvaluationModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Değerlendirmeyi Tamamla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>

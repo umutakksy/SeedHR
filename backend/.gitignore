@@ -1,0 +1,35 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build results
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.user
+*.suo
+.DS_Store
+
+# Dependencies
+packages/
+.nuget/
+
+# Logs
+logs/
+*.log
+
+# NuGet
+NuGetPackageCache/
+
+# Visual Studio
+.vs/

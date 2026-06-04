@@ -1,0 +1,143 @@
+@page
+@model SeedHR.Frontend.Pages.AnnouncementsModel
+@{
+    ViewData["Title"] = "Duyurular & Bülten";
+    var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
+    var isHrOrAdmin = userRole == "Admin" || userRole == "HR";
+}
+
+<!-- Alert banners -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+            <span>@Model.SuccessMessage</span>
+        </div>
+        <button class="text-emerald-400 hover:text-emerald-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-355 text-sm flex items-center justify-between shadow-sm" x-data="{ show: true }" x-show="show">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-400"></i>
+            <span>@Model.ErrorMessage</span>
+        </div>
+        <button class="text-rose-400 hover:text-rose-650" @@click="show = false">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+}
+
+<div class="space-y-6" x-data="{ showAddAnnouncementModal: false }">
+
+    <!-- Action Bar -->
+    <div class="flex items-center justify-between bg-white dark:bg-zinc-900 p-4 border border-slate-100 dark:border-zinc-800/80 rounded-3xl shadow-sm">
+        <h3 class="text-sm font-bold text-slate-850 dark:text-white pl-2">Şirket İçi Duyurular</h3>
+        @if (isHrOrAdmin)
+        {
+            <button @@click="showAddAnnouncementModal = true" 
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/10 transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                <i class="fa-solid fa-bullhorn"></i> Yeni Duyuru Yayınla
+            </button>
+        }
+    </div>
+
+    <!-- Announcements Grid -->
+    @if (Model.Announcements == null || !Model.Announcements.Any())
+    {
+        <div class="glass-card rounded-3xl p-12 text-center text-slate-450 text-xs">
+            <i class="fa-solid fa-bullhorn text-3xl mb-3 block text-slate-350 dark:text-zinc-700"></i>
+            Yayınlanmış şirket içi duyuru bulunmamaktadır.
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            @foreach (var announcement in Model.Announcements)
+            {
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4 hover:border-indigo-100 dark:hover:border-zinc-800 transition duration-150 text-left">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 text-[9px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 text-indigo-650 dark:text-indigo-400">
+                                @announcement.Category
+                            </span>
+                            <span class="text-[10px] text-slate-500 dark:text-zinc-400 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-clock"></i> @announcement.PublishedDate.ToString("dd MMMM yyyy")
+                            </span>
+                        </div>
+                        <h4 class="text-base font-bold text-slate-850 dark:text-white">@announcement.Title</h4>
+                        <p class="text-xs text-slate-650 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap font-medium">@announcement.Content</p>
+                    </div>
+
+                    <div class="border-t border-slate-100 dark:border-zinc-850 pt-4 mt-2 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 flex items-center justify-center text-[10px] font-bold">
+                                @announcement.CreatedBy.Substring(0, Math.Min(2, announcement.CreatedBy.Length)).ToUpper()
+                            </div>
+                            <span class="text-[10px] text-slate-550 dark:text-zinc-450 font-semibold">Yayınlayan: <strong class="text-slate-800 dark:text-white">@announcement.CreatedBy</strong></span>
+                        </div>
+
+                        @if (isHrOrAdmin)
+                        {
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@announcement.Id" onsubmit="return confirm('Bu duyuruyu kaldırmak istediğinize emin misiniz?')">
+                                <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition" title="Sil">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Create Announcement Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-[4px] p-4" 
+         x-show="showAddAnnouncementModal" x-transition x-cloak>
+         <div class="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-3xl p-6 text-left shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                <h3 class="text-sm font-bold text-slate-850 dark:text-white">Yeni Duyuru Yayınla</h3>
+                <button class="text-slate-400 hover:text-slate-650" @@click="showAddAnnouncementModal = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="post" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Duyuru Başlığı</label>
+                    <input type="text" asp-for="NewAnnouncement.Title" required placeholder="Örn: Bayram İzni Hakkında Duyuru" 
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Kategori</label>
+                    <select asp-for="NewAnnouncement.Category" required 
+                            class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-800 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="Genel">Genel Duyuru</option>
+                        <option value="Etkinlik">Şirket İçi Etkinlik</option>
+                        <option value="İzin">Resmi Tatil / İzin</option>
+                        <option value="IK">İK Güncellemeleri</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Duyuru İçeriği</label>
+                    <textarea asp-for="NewAnnouncement.Content" required rows="5" placeholder="Duyuru detaylarını yazın..." 
+                              class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-855 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+                    <button type="button" class="px-4 py-2 border border-slate-200 dark:border-zinc-855 hover:bg-slate-55 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-bold rounded-xl transition"
+                            @@click="showAddAnnouncementModal = false">İptal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition active:scale-[0.99]">Yayınla</button>
+                </div>
+            </form>
+         </div>
+    </div>
+
+</div>

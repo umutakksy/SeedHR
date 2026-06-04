@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: seedhr-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: seedhr-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017
+      - MONGODB_DATABASE_NAME=seedhr
+      - JWT_SECRET=production_optimized_ultra_secure_jwt_secret_key_12345
+      - JWT_EXPIRATION_HOURS=24
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - mongodb
+    volumes:
+      - backend-uploads:/app/uploads
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: seedhr-frontend
+    ports:
+      - "5200:5200"
+    environment:
+      - BACKEND_API_URL=http://backend:5000/api/
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - backend
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: seedhr-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+
+volumes:
+  mongo-data:
+  backend-uploads:
