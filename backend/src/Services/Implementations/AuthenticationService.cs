@@ -37,6 +37,11 @@ public class AuthenticationService : IAuthenticationService
         if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid email or password");
 
+        if (!string.IsNullOrEmpty(user.RoleId) && user.Role == null)
+        {
+            user.Role = await _unitOfWork.Roles.GetByIdAsync(user.RoleId);
+        }
+
         var token = _jwtService.GenerateAccessToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
@@ -111,6 +116,11 @@ public class AuthenticationService : IAuthenticationService
         var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
         if (user == null || user.RefreshTokenExpiry < DateTime.UtcNow)
             throw new UnauthorizedException("Invalid or expired refresh token");
+
+        if (!string.IsNullOrEmpty(user.RoleId) && user.Role == null)
+        {
+            user.Role = await _unitOfWork.Roles.GetByIdAsync(user.RoleId);
+        }
 
         var newAccessToken = _jwtService.GenerateAccessToken(user);
         var newRefreshToken = _jwtService.GenerateRefreshToken();

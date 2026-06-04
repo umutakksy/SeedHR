@@ -44,7 +44,7 @@ public class AttendanceService : IAttendanceService
 
         var created = await _unitOfWork.Attendances.AddAsync(attendance);
         await _unitOfWork.SaveChangesAsync();
-
+        await PopulateUserAsync(created);
         return _mapper.Map<AttendanceDto>(created);
     }
 
@@ -60,13 +60,17 @@ public class AttendanceService : IAttendanceService
         attendance.CheckOutTime = DateTime.UtcNow;
         var updated = await _unitOfWork.Attendances.UpdateAsync(attendance);
         await _unitOfWork.SaveChangesAsync();
-
+        await PopulateUserAsync(updated);
         return _mapper.Map<AttendanceDto>(updated);
     }
 
     public async Task<AttendanceDto?> GetAttendanceRecordAsync(string userId, DateTime date)
     {
         var attendance = await _unitOfWork.Attendances.GetByUserAndDateAsync(userId, date.Date);
+        if (attendance != null)
+        {
+            await PopulateUserAsync(attendance);
+        }
         return attendance != null ? _mapper.Map<AttendanceDto>(attendance) : null;
     }
 
@@ -76,15 +80,35 @@ public class AttendanceService : IAttendanceService
         if (startDate == DateTime.MinValue && endDate == DateTime.MaxValue)
         {
             var records = await _unitOfWork.Attendances.GetByUserAsync(userId);
+            foreach (var r in records)
+            {
+                await PopulateUserAsync(r);
+            }
             return _mapper.Map<IEnumerable<AttendanceDto>>(records);
         }
         var attendanceRecords = await _unitOfWork.Attendances.GetByUserDateRangeAsync(userId, startDate, endDate);
+        foreach (var r in attendanceRecords)
+        {
+            await PopulateUserAsync(r);
+        }
         return _mapper.Map<IEnumerable<AttendanceDto>>(attendanceRecords);
     }
 
     public async Task<IEnumerable<AttendanceDto>> GetAllAttendanceAsync()
     {
         var attendanceRecords = await _unitOfWork.Attendances.GetAllAsync();
+        foreach (var r in attendanceRecords)
+        {
+            await PopulateUserAsync(r);
+        }
         return _mapper.Map<IEnumerable<AttendanceDto>>(attendanceRecords);
+    }
+
+    private async Task PopulateUserAsync(Attendance record)
+    {
+        if (record != null && !string.IsNullOrEmpty(record.UserId) && record.User == null)
+        {
+            record.User = await _unitOfWork.Users.GetByIdAsync(record.UserId);
+        }
     }
 }
