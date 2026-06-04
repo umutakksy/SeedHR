@@ -45,18 +45,23 @@ if (!envLoaded)
 Console.WriteLine($"[ENV] TURNSTILE_SECRET_KEY length: {(Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") ?? "").Length}");
 Console.WriteLine($"[ENV] GROQ_API_KEY length: {(Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "").Length}");
 
-// Configure Serilog (Spring Boot Style)
+// Configure Serilog (Spring Boot Style with UTC+3/GMT+3 Turkish timezone)
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.AspNetCore.Hosting", Serilog.Events.LogEventLevel.Information)
     .MinimumLevel.Override("Microsoft.AspNetCore.Routing", Serilog.Events.LogEventLevel.Information)
     .Enrich.FromLogContext()
+    .Enrich.With<UtcPlus3Enricher>()
     .WriteTo.Console(
-        outputTemplate: "  {Timestamp:yyyy-MM-dd HH:mm:ss.fff}  {Level:u5} --- [{SourceContext}] : {Message:lj}{NewLine}{Exception}",
+        outputTemplate: "  {LocalTimestamp:yyyy-MM-dd HH:mm:ss.fff}  {Level:u5} --- [{SourceContext}] : {Message:lj}{NewLine}{Exception}",
         theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code
     )
-    .WriteTo.File("logs/seedhr-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.File(
+        "logs/seedhr-.txt", 
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "  {LocalTimestamp:yyyy-MM-dd HH:mm:ss.fff}  {Level:u5} --- [{SourceContext}] : {Message:lj}{NewLine}{Exception}"
+    )
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -216,3 +221,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public class UtcPlus3Enricher : Serilog.Core.ILogEventEnricher
+{
+    public void Enrich(Serilog.Events.LogEvent logEvent, Serilog.Core.ILogEventPropertyFactory propertyFactory)
+    {
+        var localTime = logEvent.Timestamp.UtcDateTime.AddHours(3);
+        logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("LocalTimestamp", localTime));
+    }
+}

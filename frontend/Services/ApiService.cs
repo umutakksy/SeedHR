@@ -377,6 +377,9 @@ namespace SeedHR.Frontend.Services
         public Task<ApiResponse<IEnumerable<AnnouncementDto>>> GetAnnouncementsAsync()
             => GetAsync<IEnumerable<AnnouncementDto>>("Announcements");
 
+        public Task<ApiResponse<IEnumerable<AnnouncementDto>>> GetPublicAnnouncementsAsync()
+            => GetAsync<IEnumerable<AnnouncementDto>>("Announcements/public");
+
         public Task<ApiResponse<AnnouncementDto>> CreateAnnouncementAsync(CreateAnnouncementRequest request)
             => PostAsync<CreateAnnouncementRequest, AnnouncementDto>("Announcements", request);
 

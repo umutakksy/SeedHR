@@ -31,32 +31,48 @@ public class UserService : IUserService
 
     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
-        var users = await _unitOfWork.Users.GetAllAsync();
-        foreach (var user in users)
-        {
-            await PopulateNavigationPropertiesAsync(user);
-        }
+        var users = (await _unitOfWork.Users.GetAllAsync()).ToList();
+        await PopulateNavigationPropertiesBulkAsync(users);
         return _mapper.Map<IEnumerable<UserDto>>(users);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersByDepartmentAsync(string departmentId)
     {
-        var users = await _unitOfWork.Users.GetByDepartmentAsync(departmentId);
-        foreach (var user in users)
-        {
-            await PopulateNavigationPropertiesAsync(user);
-        }
+        var users = (await _unitOfWork.Users.GetByDepartmentAsync(departmentId)).ToList();
+        await PopulateNavigationPropertiesBulkAsync(users);
         return _mapper.Map<IEnumerable<UserDto>>(users);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersByPositionAsync(string positionId)
     {
-        var users = await _unitOfWork.Users.GetByPositionAsync(positionId);
+        var users = (await _unitOfWork.Users.GetByPositionAsync(positionId)).ToList();
+        await PopulateNavigationPropertiesBulkAsync(users);
+        return _mapper.Map<IEnumerable<UserDto>>(users);
+    }
+
+    private async Task PopulateNavigationPropertiesBulkAsync(List<User> users)
+    {
+        if (users == null || users.Count == 0) return;
+
+        var depts = (await _unitOfWork.Departments.GetAllAsync()).ToDictionary(d => d.Id);
+        var positions = (await _unitOfWork.Positions.GetAllAsync()).ToDictionary(p => p.Id);
+        var roles = (await _unitOfWork.Roles.GetAllAsync()).ToDictionary(r => r.Id);
+        var allUsers = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
+
         foreach (var user in users)
         {
-            await PopulateNavigationPropertiesAsync(user);
+            if (!string.IsNullOrEmpty(user.DepartmentId) && depts.TryGetValue(user.DepartmentId, out var dept))
+                user.Department = dept;
+
+            if (!string.IsNullOrEmpty(user.PositionId) && positions.TryGetValue(user.PositionId, out var pos))
+                user.Position = pos;
+
+            if (!string.IsNullOrEmpty(user.RoleId) && roles.TryGetValue(user.RoleId, out var role))
+                user.Role = role;
+
+            if (!string.IsNullOrEmpty(user.ManagerId) && allUsers.TryGetValue(user.ManagerId, out var manager))
+                user.Manager = manager;
         }
-        return _mapper.Map<IEnumerable<UserDto>>(users);
     }
 
     private async Task PopulateNavigationPropertiesAsync(User user)
