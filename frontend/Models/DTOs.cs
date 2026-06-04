@@ -38,6 +38,7 @@ namespace SeedHR.Frontend.Models
     {
         public string Email { get; set; } = null!;
         public string Password { get; set; } = null!;
+        public string? TurnstileToken { get; set; }
     }
 
     public class LoginResponse

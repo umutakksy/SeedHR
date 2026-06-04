@@ -11,10 +11,14 @@ using SeedHR.Backend.Services.Interfaces;
 public class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authService;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _turnstileSecretKey;
 
-    public AuthController(IAuthenticationService authService)
+    public AuthController(IAuthenticationService authService, IHttpClientFactory httpClientFactory)
     {
         _authService = authService;
+        _httpClientFactory = httpClientFactory;
+        _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") ?? "";
     }
 
     [HttpPost("login")]
@@ -24,8 +28,51 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("Invalid input"));
 
+        // Verify Turnstile Captcha
+        if (string.IsNullOrEmpty(request.TurnstileToken))
+        {
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+        }
+
+        var turnstileSuccess = await VerifyTurnstileTokenAsync(request.TurnstileToken);
+        if (!turnstileSuccess)
+        {
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması başarısız oldu. Lütfen tekrar deneyin."));
+        }
+
         var result = await _authService.LoginAsync(request);
         return Ok(ApiResponse<LoginResponse>.SuccessResponse(result, "Login successful"));
+    }
+
+    private async Task<bool> VerifyTurnstileTokenAsync(string token)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            var values = new Dictionary<string, string>
+            {
+                { "secret", _turnstileSecretKey },
+                { "response", token }
+            };
+
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync("https://challenges.cloudflare.com/turnstile/v0/siteverify", content);
+
+            if (!response.IsSuccessStatusCode) return false;
+
+            var jsonString = await response.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonString);
+            if (doc.RootElement.TryGetProperty("success", out var successProp))
+            {
+                return successProp.GetBoolean();
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     [HttpPost("register")]

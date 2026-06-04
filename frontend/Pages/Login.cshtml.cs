@@ -44,10 +44,18 @@ namespace SeedHR.Frontend.Pages
                 return Page();
             }
 
+            string turnstileToken = Request.Form["cf-turnstile-response"]!;
+            if (string.IsNullOrEmpty(turnstileToken))
+            {
+                ErrorMessage = "Güvenlik doğrulaması (CAPTCHA) zorunludur.";
+                return Page();
+            }
+
             var loginRequest = new LoginRequest
             {
                 Email = Email,
-                Password = Password
+                Password = Password,
+                TurnstileToken = turnstileToken
             };
 
             var response = await _apiService.LoginAsync(loginRequest);
