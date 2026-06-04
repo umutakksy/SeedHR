@@ -19,7 +19,31 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load environment variables from .env file
-Env.Load();
+var currentDir = Directory.GetCurrentDirectory();
+var envLocations = new[]
+{
+    Path.Combine(currentDir, ".env"),
+    Path.Combine(currentDir, "backend", ".env"),
+    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".env")
+};
+
+bool envLoaded = false;
+foreach (var loc in envLocations)
+{
+    if (File.Exists(loc))
+    {
+        Env.Load(loc);
+        Console.WriteLine($"[ENV] loaded from: {loc}");
+        envLoaded = true;
+        break;
+    }
+}
+if (!envLoaded)
+{
+    Env.Load();
+}
+Console.WriteLine($"[ENV] TURNSTILE_SECRET_KEY length: {(Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") ?? "").Length}");
+Console.WriteLine($"[ENV] GROQ_API_KEY length: {(Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "").Length}");
 
 // Configure Serilog (Spring Boot Style)
 Log.Logger = new LoggerConfiguration()
