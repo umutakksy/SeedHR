@@ -41,7 +41,20 @@ cd SeedHR
 git pull origin main
 ```
 
-### Adım 4: Docker ile Uygulamayı Başlatın
+### Adım 4: Çevre Değişkenlerini (.env) Yapılandırın
+Güvenlik sebebiyle `.env` dosyası GitHub'a yüklenmez. Bu yüzden sunucuda `.env` dosyasını şablondan kopyalayarak oluşturmanız gerekir:
+
+1. `backend` klasörü altındaki `.env.example` şablonunu kopyalayarak `.env` oluşturun:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+2. Dosyayı düzenleyin ve üretim (production) ayarlarınızı girin (örneğin MongoDB Atlas bağlantı adresi ve JWT Secret anahtarınızı):
+   ```bash
+   nano backend/.env
+   ```
+   *(Değişiklikleri kaydedip çıkmak için: `CTRL + O`, `Enter`, `CTRL + X`)*
+
+### Adım 5: Docker ile Uygulamayı Başlatın
 ```bash
 # Arka planda build edip çalıştırmak için:
 docker-compose up --build -d
