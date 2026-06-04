@@ -42,7 +42,7 @@ public class RecruitmentService : IRecruitmentService
         return _mapper.Map<CandidateDto>(created);
     }
 
-    public async Task<CandidateDto> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest request, string cvPath)
+    public async Task<CandidateDto> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest request, string cvPath, string cvFileName, string cvContentType, byte[] cvContent)
     {
         var candidate = new Candidate
         {
@@ -55,6 +55,9 @@ public class RecruitmentService : IRecruitmentService
             Country = request.Country,
             CoverLetter = request.CoverLetter,
             CVPath = cvPath,
+            CVContent = cvContent,
+            CVFileName = cvFileName,
+            CVContentType = cvContentType,
             AppliedDate = DateTime.UtcNow,
             Status = "New"
         };
@@ -79,6 +82,26 @@ public class RecruitmentService : IRecruitmentService
         var candidate = await _unitOfWork.Candidates.GetByIdAsync(id)
             ?? throw new NotFoundException($"Candidate with ID {id} not found");
         return _mapper.Map<CandidateDto>(candidate);
+    }
+
+    public async Task<(byte[] Content, string ContentType, string FileName)> GetCandidateCVAsync(string candidateId)
+    {
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(candidateId)
+            ?? throw new NotFoundException($"Candidate with ID {candidateId} not found");
+
+        if (candidate.CVContent != null && candidate.CVContent.Length > 0)
+        {
+            return (candidate.CVContent, candidate.CVContentType ?? "application/octet-stream", candidate.CVFileName ?? "cv.pdf");
+        }
+
+        if (!string.IsNullOrEmpty(candidate.CVPath) && System.IO.File.Exists(candidate.CVPath))
+        {
+            var bytes = await System.IO.File.ReadAllBytesAsync(candidate.CVPath);
+            var ext = System.IO.Path.GetExtension(candidate.CVPath);
+            return (bytes, "application/octet-stream", $"{candidate.FullName.Replace(" ", "_")}_CV{ext}");
+        }
+
+        throw new NotFoundException("CV file content not found in database or server filesystem");
     }
 
     public async Task<IEnumerable<CandidateDto>> GetCandidatesAsync()

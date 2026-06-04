@@ -237,7 +237,7 @@
                                 <td class="px-6 py-4 text-xs text-slate-500 dark:text-zinc-400">
                                     @if (!string.IsNullOrEmpty(candidate.CVPath))
                                     {
-                                        <a href="/api/Recruitment/candidates/@candidate.Id/cv" target="_blank"
+                                        <a href="?handler=DownloadCv&id=@candidate.Id" target="_blank"
                                            class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold transition">
                                             <i class="fa-solid fa-file-pdf"></i> CV İndir
                                         </a>
@@ -644,9 +644,14 @@ function scoreCV(candidateId, candidateName) {
     document.getElementById('aiScoreError').classList.add('hidden');
     document.getElementById('aiScoreCandidateName').textContent = candidateName;
 
-    fetch(`/api/Ai/score-cv/${candidateId}`, {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    fetch('?handler=ScoreCv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token
+        },
+        body: JSON.stringify({ CandidateId: candidateId })
     })
     .then(r => r.json())
     .then(data => {

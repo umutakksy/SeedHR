@@ -14,6 +14,13 @@
         // Escape HTML to prevent XSS
         var escaped = System.Net.WebUtility.HtmlEncode(line);
 
+        // Highlight error/hata/exception/failed keywords case-insensitively first (before inserting any HTML tags)
+        var errorWordRegex = new Regex(@"\b(error|hata|exception|failed|fail|hata\w*)\b", RegexOptions.IgnoreCase);
+        escaped = errorWordRegex.Replace(escaped, m => $"<span class=\"text-rose-600 font-bold bg-rose-50 px-1 rounded border border-rose-200/50\">{m.Value}</span>");
+
+        var warningWordRegex = new Regex(@"\b(warning|warn|uyari)\b", RegexOptions.IgnoreCase);
+        escaped = warningWordRegex.Replace(escaped, m => $"<span class=\"text-amber-600 font-bold bg-amber-50 px-1 rounded border border-amber-200/50\">{m.Value}</span>");
+
         // Highlight date/time at the start (e.g. 2026-06-04 22:03:57.779 +00:00)
         var dateRegex = new Regex(@"^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s\+\d{2}:\d{2}");
         escaped = dateRegex.Replace(escaped, m => $"<span class=\"text-slate-400 font-semibold font-mono\">{m.Value}</span>");
@@ -225,8 +232,8 @@
                             {
                                 if (string.IsNullOrWhiteSpace(line)) continue;
                                 
-                                var isError = line.Contains("[ERR]") || line.Contains("Exception") || line.Contains("fail:");
-                                var isWarning = line.Contains("[WRN]") || line.Contains("warn:");
+                                var isError = line.Contains("[ERR]") || line.Contains("Exception") || line.Contains("fail:") || line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("hata", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0;
+                                var isWarning = line.Contains("[WRN]") || line.Contains("warn:") || line.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("uyari", StringComparison.OrdinalIgnoreCase) >= 0;
                                 
                                 var rowClass = "hover:bg-indigo-50/20 transition flex items-start py-1.5 px-3 gap-3 rounded-lg";
                                 if (isError) {

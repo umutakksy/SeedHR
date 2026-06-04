@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 public interface IRecruitmentService
 {
     Task<CandidateDto> CreateCandidateAsync(CreateCandidateRequest request);
-    Task<CandidateDto> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest request, string cvPath);
+    Task<CandidateDto> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest request, string cvPath, string cvFileName, string cvContentType, byte[] cvContent);
     Task<CandidateDto> GetCandidateByIdAsync(string id);
+    Task<(byte[] Content, string ContentType, string FileName)> GetCandidateCVAsync(string candidateId);
     Task<IEnumerable<CandidateDto>> GetCandidatesAsync();
 
     Task<JobPostingDto> CreateJobPostingAsync(CreateJobPostingRequest request);

@@ -495,4 +495,15 @@ namespace SeedHR.Frontend.Models
         public DateTime LastModified { get; set; }
         public string SizeFormatted { get; set; } = null!;
     }
+
+    public class CvScoreResult
+    {
+        public string CandidateId { get; set; } = null!;
+        public string CandidateName { get; set; } = null!;
+        public int Score { get; set; }
+        public string Summary { get; set; } = null!;
+        public List<string> Strengths { get; set; } = new();
+        public List<string> Weaknesses { get; set; } = new();
+        public string Recommendation { get; set; } = null!;
+    }
 }

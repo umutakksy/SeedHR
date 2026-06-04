@@ -3,6 +3,7 @@ namespace SeedHR.Backend.Repository.Interfaces;
 public interface IUnitOfWork : IDisposable
 {
     IUserRepository Users { get; }
+    IRepository<SeedHR.Backend.Models.Entities.Role> Roles { get; }
     IDepartmentRepository Departments { get; }
     IPositionRepository Positions { get; }
     ILeaveRequestRepository LeaveRequests { get; }

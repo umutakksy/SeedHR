@@ -308,7 +308,7 @@ namespace SeedHR.Frontend.Services
             return client.GetAsync($"Recruitment/candidates/{candidateId}/cv");
         }
 
-        public async Task<ApiResponse<CandidateDto>> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest candidateInfo, string cvFileName, Stream cvFileStream)
+        public async Task<ApiResponse<CandidateDto>> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest candidateInfo, string cvFileName, Stream cvFileStream, string turnstileToken)
         {
             using var content = new MultipartFormDataContent();
             content.Add(new StringContent(candidateInfo.FirstName), "FirstName");
@@ -319,6 +319,7 @@ namespace SeedHR.Frontend.Services
             if (candidateInfo.City != null) content.Add(new StringContent(candidateInfo.City), "City");
             if (candidateInfo.Country != null) content.Add(new StringContent(candidateInfo.Country), "Country");
             if (candidateInfo.CoverLetter != null) content.Add(new StringContent(candidateInfo.CoverLetter), "CoverLetter");
+            content.Add(new StringContent(turnstileToken ?? ""), "turnstileToken");
 
             var streamContent = new StreamContent(cvFileStream);
             content.Add(streamContent, "cv", cvFileName);
@@ -381,5 +382,16 @@ namespace SeedHR.Frontend.Services
 
         public Task<ApiResponse<bool>> DeleteLogFileAsync(string fileName)
             => DeleteAsync<bool>($"Logs/{fileName}");
+
+        // AI Score
+        public Task<ApiResponse<CvScoreResult>> ScoreCvAsync(string candidateId, string? jobPostingId = null)
+        {
+            var url = $"Ai/score-cv/{candidateId}";
+            if (!string.IsNullOrEmpty(jobPostingId))
+            {
+                url += $"?jobPostingId={jobPostingId}";
+            }
+            return PostAsync<object, CvScoreResult>(url, new { });
+        }
     }
 }

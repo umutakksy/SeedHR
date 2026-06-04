@@ -818,5 +818,67 @@ public static class DatabaseSeeder
             }
         }
         await context.LeaveBalances.InsertManyAsync(balancesToInsert);
+
+        // 12. Seed Candidates
+        var candidateCVContent = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\n%쏢\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/Resources <<\n/Font <<\n/F1 <<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\n>>\n>>\n/MediaBox [0 0 595.275 841.89]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<< /Length 52 >>\nstream\nBT\n/F1 12 Tf\n72 712 Td\n(Mock Resume for Candidate Evaluation) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000015 00000 n\n0000000074 00000 n\n0000000139 00000 n\n0000000318 00000 n\ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n419\n%%EOF");
+        var candidate1 = new Candidate
+        {
+            Id = "candidate_1",
+            FirstName = "Kaan",
+            LastName = "Yılmaz",
+            Email = "kaan.yilmaz@test.com",
+            Phone = "+90 532 999 8877",
+            Address = "Beşiktaş",
+            City = "İstanbul",
+            Country = "Türkiye",
+            CVPath = "",
+            CVContent = candidateCVContent,
+            CVFileName = "Kaan_Yilmaz_CV.pdf",
+            CVContentType = "application/pdf",
+            CoverLetter = "Merhaba, Kıdemli .NET Geliştirici pozisyonu için başvuruyorum. C# ve .NET Core konularında 5 yıllık deneyimim bulunmaktadır.",
+            AppliedDate = DateTime.UtcNow.AddDays(-2),
+            Status = "New",
+            Applications = new List<CandidateApplication>
+            {
+                new CandidateApplication
+                {
+                    Id = "app_1",
+                    JobPostingId = "job_1",
+                    ApplicationDate = DateTime.UtcNow.AddDays(-2),
+                    Status = "Applied"
+                }
+            }
+        };
+
+        var candidate2 = new Candidate
+        {
+            Id = "candidate_2",
+            FirstName = "Merve",
+            LastName = "Demir",
+            Email = "merve.demir@test.com",
+            Phone = "+90 533 888 7766",
+            Address = "Kadıköy",
+            City = "İstanbul",
+            Country = "Türkiye",
+            CVPath = "",
+            CVContent = candidateCVContent,
+            CVFileName = "Merve_Demir_CV.pdf",
+            CVContentType = "application/pdf",
+            CoverLetter = "Yazılım ekibinize katkıda bulunmaktan mutluluk duyarım. React, Next.js ve Node.js teknolojilerinde uzmanım.",
+            AppliedDate = DateTime.UtcNow.AddDays(-1),
+            Status = "Shortlisted",
+            Applications = new List<CandidateApplication>
+            {
+                new CandidateApplication
+                {
+                    Id = "app_2",
+                    JobPostingId = "job_1",
+                    ApplicationDate = DateTime.UtcNow.AddDays(-1),
+                    Status = "Applied"
+                }
+            }
+        };
+
+        await context.Candidates.InsertManyAsync(new List<Candidate> { candidate1, candidate2 });
     }
 }

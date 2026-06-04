@@ -175,5 +175,48 @@ namespace SeedHR.Frontend.Pages
             await LoadDataAsync();
             return Page();
         }
+
+        public async Task<IActionResult> OnGetDownloadCvAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                ErrorMessage = "Geçersiz aday ID'si.";
+                await LoadDataAsync();
+                return Page();
+            }
+
+            var response = await _apiService.DownloadCandidateCVAsync(id);
+            if (!response.IsSuccessStatusCode)
+            {
+                ErrorMessage = "CV dosyası sunucudan veya veritabanından indirilemedi.";
+                await LoadDataAsync();
+                return Page();
+            }
+
+            var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            var contentDisposition = response.Content.Headers.ContentDisposition;
+            var fileName = contentDisposition?.FileNameStar ?? contentDisposition?.FileName ?? "cv.pdf";
+            fileName = fileName.Trim('"');
+
+            var fileBytes = await response.Content.ReadAsByteArrayAsync();
+            return File(fileBytes, contentType, fileName);
+        }
+
+        public async Task<IActionResult> OnPostScoreCvAsync([FromBody] ScoreCvRequest request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.CandidateId))
+            {
+                return new JsonResult(ApiResponse<CvScoreResult>.ErrorResponse("Aday ID'si gereklidir."));
+            }
+
+            var res = await _apiService.ScoreCvAsync(request.CandidateId, request.JobPostingId);
+            return new JsonResult(res);
+        }
+    }
+
+    public class ScoreCvRequest
+    {
+        public string CandidateId { get; set; } = null!;
+        public string? JobPostingId { get; set; }
     }
 }

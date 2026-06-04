@@ -110,6 +110,23 @@ public class AiController : ControllerBase
             var groqResponse = JsonSerializer.Deserialize<GroqResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             var aiContent = groqResponse?.Choices?[0]?.Message?.Content ?? "{}";
 
+            // Clean markdown json formatting if present
+            aiContent = aiContent.Trim();
+            if (aiContent.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            {
+                aiContent = aiContent.Substring(7);
+            }
+            else if (aiContent.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+            {
+                aiContent = aiContent.Substring(3);
+            }
+
+            if (aiContent.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+            {
+                aiContent = aiContent.Substring(0, aiContent.Length - 3);
+            }
+            aiContent = aiContent.Trim();
+
             var scoreResult = JsonSerializer.Deserialize<CvScoreResult>(aiContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) 
                               ?? new CvScoreResult { Score = 0, Summary = "Değerlendirilemedi", Recommendation = "Belirsiz" };
 

@@ -8,6 +8,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly IMongoDbContext _context;
     private IUserRepository? _userRepository;
+    private IRepository<SeedHR.Backend.Models.Entities.Role>? _roleRepository;
     private IDepartmentRepository? _departmentRepository;
     private IPositionRepository? _positionRepository;
     private ILeaveRequestRepository? _leaveRequestRepository;
@@ -32,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public IUserRepository Users => _userRepository ??= new UserRepository(_context);
+    public IRepository<SeedHR.Backend.Models.Entities.Role> Roles => _roleRepository ??= new MongoRepository<SeedHR.Backend.Models.Entities.Role>(_context);
     public IDepartmentRepository Departments => _departmentRepository ??= new DepartmentRepository(_context);
     public IPositionRepository Positions => _positionRepository ??= new PositionRepository(_context);
     public ILeaveRequestRepository LeaveRequests => _leaveRequestRepository ??= new LeaveRequestRepository(_context);

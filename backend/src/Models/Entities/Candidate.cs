@@ -10,6 +10,9 @@ public class Candidate : BaseEntity
     public string? City { get; set; }
     public string? Country { get; set; }
     public string? CVPath { get; set; }
+    public byte[]? CVContent { get; set; }
+    public string? CVFileName { get; set; }
+    public string? CVContentType { get; set; }
     public string? CoverLetter { get; set; }
     public DateTime AppliedDate { get; set; }
     public string Status { get; set; } = "New"; // New, Reviewing, Shortlisted, Rejected, Hired

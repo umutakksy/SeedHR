@@ -73,8 +73,16 @@ namespace SeedHR.Frontend.Pages
                 return Page();
             }
 
+            string turnstileToken = Request.Form["cf-turnstile-response"]!;
+            if (string.IsNullOrEmpty(turnstileToken))
+            {
+                ErrorMessage = "Güvenlik doğrulaması (CAPTCHA) zorunludur.";
+                await LoadOpenPostingsAsync();
+                return Page();
+            }
+
             using var stream = CVFile.OpenReadStream();
-            var res = await _apiService.ApplyToJobPostingAsync(SelectedJobPostingId, Candidate, CVFile.FileName, stream);
+            var res = await _apiService.ApplyToJobPostingAsync(SelectedJobPostingId, Candidate, CVFile.FileName, stream, turnstileToken);
 
             if (res.Success)
             {

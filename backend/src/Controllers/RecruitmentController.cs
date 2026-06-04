@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Hosting;
 using System;
 using System.IO;
 using Microsoft.AspNetCore.Http;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Net.Http;
+using Microsoft.Extensions.Configuration;
 
 namespace SeedHR.Backend.Controllers;
 
@@ -17,11 +21,17 @@ public class RecruitmentController : ControllerBase
 {
     private readonly IRecruitmentService _recruitmentService;
     private readonly IWebHostEnvironment _env;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _turnstileSecretKey;
 
-    public RecruitmentController(IRecruitmentService recruitmentService, IWebHostEnvironment env)
+    public RecruitmentController(IRecruitmentService recruitmentService, IWebHostEnvironment env, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
         _recruitmentService = recruitmentService;
         _env = env;
+        _httpClientFactory = httpClientFactory;
+        _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") 
+                              ?? configuration["Turnstile:SecretKey"] 
+                              ?? "0x4AAAAAADe7IxiQPHhZQ2ewHtNCl_9xpGQ";
     }
 
     [HttpPost("candidates")]
@@ -87,8 +97,21 @@ public class RecruitmentController : ControllerBase
         [FromForm] string? city,
         [FromForm] string? country,
         [FromForm] string? coverLetter,
+        [FromForm] string? turnstileToken,
         IFormFile cv)
     {
+        // Verify Turnstile Captcha
+        if (string.IsNullOrEmpty(turnstileToken))
+        {
+            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+        }
+
+        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(turnstileToken);
+        if (!turnstileSuccess)
+        {
+            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+        }
+
         if (cv == null || cv.Length == 0)
             return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CV file is required"));
 
@@ -102,9 +125,17 @@ public class RecruitmentController : ControllerBase
         var fileName = $"{Guid.NewGuid()}{fileExtension}";
         var filePath = Path.Combine(uploadFolder, fileName);
 
+        byte[] cvBytes;
+        using (var memoryStream = new MemoryStream())
+        {
+            await cv.CopyToAsync(memoryStream);
+            cvBytes = memoryStream.ToArray();
+        }
+
+        // Also save to filesystem as a fallback
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
-            await cv.CopyToAsync(stream);
+            await stream.WriteAsync(cvBytes, 0, cvBytes.Length);
         }
 
         var request = new CreateCandidateRequest
@@ -119,7 +150,7 @@ public class RecruitmentController : ControllerBase
             CoverLetter = coverLetter
         };
 
-        var candidate = await _recruitmentService.ApplyToJobPostingAsync(jobPostingId, request, filePath);
+        var candidate = await _recruitmentService.ApplyToJobPostingAsync(jobPostingId, request, filePath, cv.FileName, cv.ContentType, cvBytes);
         return Created("", ApiResponse<CandidateDto>.SuccessResponse(candidate, "Application submitted successfully"));
     }
 
@@ -159,16 +190,15 @@ public class RecruitmentController : ControllerBase
     [HttpGet("candidates/{id}/cv")]
     public async Task<IActionResult> DownloadCandidateCV(string id)
     {
-        var candidate = await _recruitmentService.GetCandidateByIdAsync(id);
-        if (candidate == null || string.IsNullOrEmpty(candidate.CVPath))
-            return NotFound("CV not found");
-
-        if (!System.IO.File.Exists(candidate.CVPath))
-            return NotFound("CV file not found on server");
-
-        var bytes = await System.IO.File.ReadAllBytesAsync(candidate.CVPath);
-        var fileName = $"{candidate.FullName.Replace(" ", "_")}_CV{System.IO.Path.GetExtension(candidate.CVPath)}";
-        return File(bytes, "application/octet-stream", fileName);
+        try
+        {
+            var (bytes, contentType, fileName) = await _recruitmentService.GetCandidateCVAsync(id);
+            return File(bytes, contentType, fileName);
+        }
+        catch (System.Exception ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("interviews")]
@@ -193,6 +223,48 @@ public class RecruitmentController : ControllerBase
     {
         var interview = await _recruitmentService.CompleteInterviewAsync(id, request);
         return Ok(ApiResponse<InterviewDto>.SuccessResponse(interview, "Interview completed successfully"));
+    }
+
+    private async Task<(bool Success, string ErrorMessage)> VerifyTurnstileTokenAsync(string token)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            var values = new Dictionary<string, string>
+            {
+                { "secret", _turnstileSecretKey },
+                { "response", token }
+            };
+
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync("https://challenges.cloudflare.com/turnstile/v0/siteverify", content);
+            var jsonString = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode) 
+                return (false, $"HTTP Hata {response.StatusCode}: {jsonString}");
+
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonString);
+            if (doc.RootElement.TryGetProperty("success", out var successProp) && successProp.GetBoolean())
+            {
+                return (true, string.Empty);
+            }
+
+            var errors = new List<string>();
+            if (doc.RootElement.TryGetProperty("error-codes", out var errorCodesProp) && errorCodesProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var err in errorCodesProp.EnumerateArray())
+                {
+                    errors.Add(err.GetString() ?? "");
+                }
+            }
+
+            var errorStr = errors.Count > 0 ? string.Join(", ", errors) : "Bilinmeyen Turnstile hatası";
+            return (false, errorStr);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"İstisna oluştu: {ex.Message}");
+        }
     }
 }
 

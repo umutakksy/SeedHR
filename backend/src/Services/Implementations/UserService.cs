@@ -25,25 +25,63 @@ public class UserService : IUserService
     {
         var user = await _unitOfWork.Users.GetByIdAsync(id)
             ?? throw new NotFoundException($"User with ID {id} not found");
+        await PopulateNavigationPropertiesAsync(user);
         return _mapper.Map<UserDto>(user);
     }
 
     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
         var users = await _unitOfWork.Users.GetAllAsync();
+        foreach (var user in users)
+        {
+            await PopulateNavigationPropertiesAsync(user);
+        }
         return _mapper.Map<IEnumerable<UserDto>>(users);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersByDepartmentAsync(string departmentId)
     {
         var users = await _unitOfWork.Users.GetByDepartmentAsync(departmentId);
+        foreach (var user in users)
+        {
+            await PopulateNavigationPropertiesAsync(user);
+        }
         return _mapper.Map<IEnumerable<UserDto>>(users);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersByPositionAsync(string positionId)
     {
         var users = await _unitOfWork.Users.GetByPositionAsync(positionId);
+        foreach (var user in users)
+        {
+            await PopulateNavigationPropertiesAsync(user);
+        }
         return _mapper.Map<IEnumerable<UserDto>>(users);
+    }
+
+    private async Task PopulateNavigationPropertiesAsync(User user)
+    {
+        if (user == null) return;
+
+        if (!string.IsNullOrEmpty(user.DepartmentId) && user.Department == null)
+        {
+            user.Department = await _unitOfWork.Departments.GetByIdAsync(user.DepartmentId);
+        }
+
+        if (!string.IsNullOrEmpty(user.PositionId) && user.Position == null)
+        {
+            user.Position = await _unitOfWork.Positions.GetByIdAsync(user.PositionId);
+        }
+
+        if (!string.IsNullOrEmpty(user.RoleId) && user.Role == null)
+        {
+            user.Role = await _unitOfWork.Roles.GetByIdAsync(user.RoleId);
+        }
+
+        if (!string.IsNullOrEmpty(user.ManagerId) && user.Manager == null)
+        {
+            user.Manager = await _unitOfWork.Users.GetByIdAsync(user.ManagerId);
+        }
     }
 
     public async Task<UserDto> CreateUserAsync(CreateUserRequest request)
