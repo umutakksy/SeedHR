@@ -65,11 +65,22 @@ public class AiController : ControllerBase
 
         // Build job requirements context
         string jobContext = "";
-        if (!string.IsNullOrEmpty(jobPostingId))
+        string activeJobTitle = "Genel Başvuru";
+        string activeJobReqs = "Belirtilmemiş";
+
+        var targetJobId = jobPostingId;
+        if (string.IsNullOrEmpty(targetJobId) && candidate.Applications != null && candidate.Applications.Any())
         {
-            var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(jobPostingId);
+            targetJobId = candidate.Applications.First().JobPostingId;
+        }
+
+        if (!string.IsNullOrEmpty(targetJobId))
+        {
+            var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(targetJobId);
             if (jobPosting != null)
             {
+                activeJobTitle = jobPosting.Title;
+                activeJobReqs = jobPosting.Requirements;
                 jobContext = $"\n\nİş İlanı: {jobPosting.Title}\nGereksinimler: {jobPosting.Requirements}\nAçıklama: {jobPosting.Description}";
             }
         }
@@ -107,7 +118,7 @@ public class AiController : ControllerBase
             if (!httpResponse.IsSuccessStatusCode)
             {
                 // Fallback to local rule-based evaluation if API key is invalid/expired
-                var fallbackResult = GenerateFallbackScoreResult(candidate, jobPostingId);
+                var fallbackResult = GenerateFallbackScoreResult(candidate, activeJobTitle, activeJobReqs);
                 return Ok(ApiResponse<CvScoreResult>.SuccessResponse(fallbackResult, "CV değerlendirmesi (Lokal AI Analizi) tamamlandı"));
             }
 
@@ -136,18 +147,20 @@ public class AiController : ControllerBase
 
             scoreResult.CandidateId = candidateId;
             scoreResult.CandidateName = $"{candidate.FirstName} {candidate.LastName}";
+            scoreResult.JobTitle = activeJobTitle;
+            scoreResult.JobRequirements = activeJobReqs;
 
             return Ok(ApiResponse<CvScoreResult>.SuccessResponse(scoreResult, "CV değerlendirmesi tamamlandı"));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Fallback to local rule-based evaluation if any other error occurs
-            var fallbackResult = GenerateFallbackScoreResult(candidate, jobPostingId);
+            var fallbackResult = GenerateFallbackScoreResult(candidate, activeJobTitle, activeJobReqs);
             return Ok(ApiResponse<CvScoreResult>.SuccessResponse(fallbackResult, "CV değerlendirmesi (Lokal AI Analizi - Hata Sonrası) tamamlandı"));
         }
     }
 
-    private CvScoreResult GenerateFallbackScoreResult(SeedHR.Backend.Models.Entities.Candidate candidate, string? jobPostingId)
+    private CvScoreResult GenerateFallbackScoreResult(SeedHR.Backend.Models.Entities.Candidate candidate, string jobTitle, string jobRequirements)
     {
         int score = 78;
         var strengths = new List<string> { "İletişim becerileri", "Detay odaklı çalışma" };
@@ -186,7 +199,9 @@ public class AiController : ControllerBase
             Summary = summary,
             Strengths = strengths,
             Weaknesses = weaknesses,
-            Recommendation = recommendation
+            Recommendation = recommendation,
+            JobTitle = jobTitle,
+            JobRequirements = jobRequirements
         };
     }
 
@@ -239,6 +254,10 @@ public class CvScoreResult
     public List<string> Weaknesses { get; set; } = new();
     [JsonPropertyName("recommendation")]
     public string Recommendation { get; set; } = null!;
+    [JsonPropertyName("jobTitle")]
+    public string? JobTitle { get; set; }
+    [JsonPropertyName("jobRequirements")]
+    public string? JobRequirements { get; set; }
 }
 
 internal class GroqResponse

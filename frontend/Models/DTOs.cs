@@ -505,5 +505,7 @@ namespace SeedHR.Frontend.Models
         public List<string> Strengths { get; set; } = new();
         public List<string> Weaknesses { get; set; } = new();
         public string Recommendation { get; set; } = null!;
+        public string? JobTitle { get; set; }
+        public string? JobRequirements { get; set; }
     }
 }
