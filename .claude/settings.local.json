@@ -5,7 +5,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git commit -m 'fix: replace Console.WriteLine with ILogger in ApiService *)",
-      "Bash(git commit -m 'temp: allow any origin CORS for debugging 403 issue *)"
+      "Bash(git commit -m 'temp: allow any origin CORS for debugging 403 issue *)",
+      "Bash(git commit -m 'fix: synchronize JWT_SECRET between docker-compose and .env *)"
     ]
   }
 }
