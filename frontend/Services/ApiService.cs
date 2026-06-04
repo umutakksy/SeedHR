@@ -45,19 +45,60 @@ namespace SeedHR.Frontend.Services
         }
 
         // Generic API wrappers
+        private async Task<ApiResponse<T>> DeserializeResponseAsync<T>(HttpResponseMessage response)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ApiResponse<T>
+                    {
+                        Success = true,
+                        Message = "Success",
+                        Data = default!,
+                        Timestamp = DateTime.UtcNow
+                    };
+                }
+                return ApiResponse<T>.ErrorResponse($"API returned empty response with status {(int)response.StatusCode}: {response.ReasonPhrase}");
+            }
+
+            var trimmedContent = content.Trim();
+            if (!trimmedContent.StartsWith("{") && !trimmedContent.StartsWith("["))
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ApiResponse<T>
+                    {
+                        Success = true,
+                        Message = trimmedContent,
+                        Data = default!,
+                        Timestamp = DateTime.UtcNow
+                    };
+                }
+                return ApiResponse<T>.ErrorResponse($"API returned non-JSON error {(int)response.StatusCode}: {trimmedContent}");
+            }
+
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, options);
+                if (apiResponse != null) return apiResponse;
+                return ApiResponse<T>.ErrorResponse($"Failed to deserialize response as {typeof(T).Name}");
+            }
+            catch (JsonException ex)
+            {
+                return ApiResponse<T>.ErrorResponse($"JSON deserialization error: {ex.Message}. Raw content: {trimmedContent}");
+            }
+        }
+
         public async Task<ApiResponse<T>> GetAsync<T>(string url)
         {
             try
             {
                 var client = GetClient();
                 var response = await client.GetAsync(url);
-                var content = await response.Content.ReadAsStringAsync();
-                
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, options);
-                
-                if (apiResponse != null) return apiResponse;
-                return ApiResponse<T>.ErrorResponse($"Failed to parse response: {response.StatusCode}");
+                return await DeserializeResponseAsync<T>(response);
             }
             catch (Exception ex)
             {
@@ -71,13 +112,7 @@ namespace SeedHR.Frontend.Services
             {
                 var client = GetClient();
                 var response = await client.PostAsJsonAsync(url, data);
-                var content = await response.Content.ReadAsStringAsync();
-                
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<TResponse>>(content, options);
-                
-                if (apiResponse != null) return apiResponse;
-                return ApiResponse<TResponse>.ErrorResponse($"Failed to parse response: {response.StatusCode}");
+                return await DeserializeResponseAsync<TResponse>(response);
             }
             catch (Exception ex)
             {
@@ -91,13 +126,7 @@ namespace SeedHR.Frontend.Services
             {
                 var client = GetClient();
                 var response = await client.PutAsJsonAsync(url, data);
-                var content = await response.Content.ReadAsStringAsync();
-                
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<TResponse>>(content, options);
-                
-                if (apiResponse != null) return apiResponse;
-                return ApiResponse<TResponse>.ErrorResponse($"Failed to parse response: {response.StatusCode}");
+                return await DeserializeResponseAsync<TResponse>(response);
             }
             catch (Exception ex)
             {
@@ -111,13 +140,7 @@ namespace SeedHR.Frontend.Services
             {
                 var client = GetClient();
                 var response = await client.DeleteAsync(url);
-                var content = await response.Content.ReadAsStringAsync();
-                
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<TResponse>>(content, options);
-                
-                if (apiResponse != null) return apiResponse;
-                return ApiResponse<TResponse>.ErrorResponse($"Failed to parse response: {response.StatusCode}");
+                return await DeserializeResponseAsync<TResponse>(response);
             }
             catch (Exception ex)
             {
@@ -132,13 +155,7 @@ namespace SeedHR.Frontend.Services
             {
                 var client = GetClient();
                 var response = await client.PostAsync(url, formContent);
-                var content = await response.Content.ReadAsStringAsync();
-                
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<TResponse>>(content, options);
-                
-                if (apiResponse != null) return apiResponse;
-                return ApiResponse<TResponse>.ErrorResponse($"Failed to parse response: {response.StatusCode}");
+                return await DeserializeResponseAsync<TResponse>(response);
             }
             catch (Exception ex)
             {
