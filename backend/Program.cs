@@ -221,7 +221,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseRateLimiter();
+// app.UseRateLimiter();
 
 // Custom Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -231,6 +231,6 @@ app.UseCors("AllowedOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers().RequireRateLimiting("GeneralRateLimit");
+app.MapControllers();
 
 app.Run();

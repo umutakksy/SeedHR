@@ -26,22 +26,27 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("LoginRateLimit")]
     public async Task<ActionResult<ApiResponse<LoginResponse>>> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("Invalid input"));
 
         // Verify Turnstile Captcha
-        if (string.IsNullOrEmpty(request.TurnstileToken))
-        {
-            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
-        }
+        var appEnv = Environment.GetEnvironmentVariable("APP_ENVIRONMENT") ?? "Development";
+        var isDev = appEnv.Equals("Development", StringComparison.OrdinalIgnoreCase);
 
-        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
-        if (!turnstileSuccess)
+        if (!isDev)
         {
-            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            if (string.IsNullOrEmpty(request.TurnstileToken))
+            {
+                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+            }
+
+            var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
+            if (!turnstileSuccess)
+            {
+                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            }
         }
 
         var result = await _authService.LoginAsync(request);
