@@ -91,9 +91,60 @@ docker-compose up --build -d
 
 ---
 
-## 3. Docker Port ve Nginx Yapılandırması ⚙️
+## 3. Port Yapılandırması ⚙️
 
-- **Nginx (Dış Dünya):** Projede Nginx `80` portundan dış dünyaya hizmet vermektedir. AWS EC2 Security Group (Güvenlik Grubu) ayarlarından **Inbound Rules** kısmına **HTTP (Port 80)** erişim izni vermeyi unutmayın.
-- **Backend:** `http://localhost:5000`
-- **Frontend:** `http://localhost:5200`
-- **Veritabanı:** `mongodb://localhost:27017`
+| Servis    | Açıklama                                  | Port (Sunucu)           |
+|-----------|-------------------------------------------|-------------------------|
+| **Nginx** | Docker içi yönlendirici (iç proxy)        | `8085` (dış:Docker içi) |
+| Backend   | .NET API - sadece localhost'a açık        | `127.0.0.1:5005`        |
+| Frontend  | Razor Pages - sadece localhost'a açık     | `127.0.0.1:5205`        |
+| MongoDB   | Veritabanı - sadece localhost'a açık      | `127.0.0.1:27017`       |
+
+> AWS EC2 **Security Group → Inbound Rules** kısmından:
+> - **Port 80 (HTTP)** → Herkes (0.0.0.0/0) ✅
+> - **Port 443 (HTTPS)** → Herkes (0.0.0.0/0) ✅
+> - **Port 22 (SSH)** → Kendi IP'niz ✅
+> - **Port 8085** → Kapalı kalabilir (localhost'tan erişiliyor) ✅
+
+---
+
+## 4. SSL Sertifikası (Certbot + Let's Encrypt) 🔒
+
+Bu adımı Docker'ı ayağa kaldırdıktan **sonra** yapın. SSL, host makinedeki Nginx üzerinde yönetilir.
+
+### Adım 1: Certbot Kurulumu (sunucuda)
+```bash
+sudo apt update
+sudo apt install certbot python3-certbot-nginx -y
+```
+
+### Adım 2: Host Nginx Yapılandırmasını Kurun
+Projede hazır bir şablon konfigürasyon dosyası mevcuttur (`nginx/seedhr-host.nginx.conf`).
+Bunu sunucudaki doğru konuma kopyalayın:
+```bash
+# Önce HTTP bloku ile başlayıp sertifika alabilmek için geçici konfigürasyon
+sudo cp ~/SeedHR/nginx/seedhr-host.nginx.conf /etc/nginx/sites-available/seedhr.com.tr
+
+# Aktif hale getirin
+sudo ln -s /etc/nginx/sites-available/seedhr.com.tr /etc/nginx/sites-enabled/seedhr.com.tr
+
+# Test edip yeniden yükleyin
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Adım 3: SSL Sertifikası Alın (Certbot)
+```bash
+# Certbot otomatik olarak nginx.conf dosyasını SSL için düzenler:
+sudo certbot --nginx -d seedhr.com.tr -d www.seedhr.com.tr
+```
+Komut çalışırken e-posta adresinizi girin, şartları kabul edin ve `2` seçeneğini seçerek HTTP → HTTPS zorunlu yönlendirmeyi aktif edin.
+
+### Adım 4: Otomatik Yenilemeyi Test Edin
+Certbot sertifikaları 90 günde bir yeniler. Otomatik yenilemenin çalışıp çalışmadığını test edin:
+```bash
+sudo certbot renew --dry-run
+```
+
+### Adım 5: Son Test
+Tarayıcınızdan `https://seedhr.com.tr` adresine giderek sitenizin HTTPS üzerinden çalıştığını doğrulayın. 🎉
+
