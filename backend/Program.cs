@@ -177,11 +177,24 @@ var app = builder.Build();
 // Initialize MongoDB indexes and seed data
 using (var scope = app.Services.CreateScope())
 {
-    var mongoContext = scope.ServiceProvider.GetRequiredService<IMongoDbContext>();
-    await mongoContext.CreateIndexesAsync();
-    
-    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DatabaseSeeder.SeedAsync(mongoContext, passwordHasher);
+    Console.WriteLine("[SEED] Connecting to MongoDB...");
+    try
+    {
+        var mongoContext = scope.ServiceProvider.GetRequiredService<IMongoDbContext>();
+        Console.WriteLine("[SEED] Creating MongoDB indexes...");
+        await mongoContext.CreateIndexesAsync();
+        Console.WriteLine("[SEED] Indexes created successfully.");
+        
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        Console.WriteLine("[SEED] Starting DatabaseSeeder.SeedAsync...");
+        await DatabaseSeeder.SeedAsync(mongoContext, passwordHasher);
+        Console.WriteLine("[SEED] Database seeding completed successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] Failed to seed database: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
+    }
 }
 
 // Configure the HTTP request pipeline
