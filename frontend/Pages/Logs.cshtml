@@ -1,0 +1,162 @@
+@page
+@model SeedHR.Frontend.Pages.LogsModel
+@{
+    ViewData["Title"] = "Sistem Günlükleri (Logs)";
+}
+
+<div class="space-y-6" x-data="{ activeFile: '@Model.SelectedLogName', lineCount: 250 }">
+    <!-- Breadcrumb / Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Yönetici Araçları</p>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-zinc-100 tracking-tight">Sistem Günlükleri</h2>
+            <p class="text-sm text-slate-500 dark:text-zinc-400 mt-1">Backend sunucu log dosyalarını görüntüleyin, analiz edin ve yönetin.</p>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-400 rounded-2xl flex items-center gap-3 text-sm shadow-sm" x-data="{ show: true }" x-show="show">
+            <i class="fa-solid fa-circle-check text-lg"></i>
+            <span class="flex-1">@Model.SuccessMessage</span>
+            <button class="text-emerald-500 hover:text-emerald-700" @@click="show = false">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-455 rounded-2xl flex items-center gap-3 text-sm shadow-sm" x-data="{ show: true }" x-show="show">
+            <i class="fa-solid fa-circle-exclamation text-lg"></i>
+            <span class="flex-1">@Model.ErrorMessage</span>
+            <button class="text-rose-500 hover:text-rose-700" @@click="show = false">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    }
+
+    <!-- Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Log Files List -->
+        <div class="lg:col-span-1 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open text-indigo-500"></i>
+                    <span>Log Dosyaları (@Model.LogFiles.Count)</span>
+                </h3>
+                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold">TXT</span>
+            </div>
+
+            <div class="space-y-2 max-h-[550px] overflow-y-auto custom-scrollbar pr-1">
+                @if (Model.LogFiles.Count == 0)
+                {
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300"></i>
+                        <p>Henüz günlük dosyası bulunmuyor.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var logFile in Model.LogFiles)
+                    {
+                        var isSelected = logFile.FileName == Model.SelectedLogName;
+                        <div class="group flex items-center justify-between p-3 rounded-xl border transition @(isSelected ? "bg-indigo-50/50 border-indigo-200 text-indigo-700" : "bg-slate-50/30 border-slate-100 hover:bg-slate-50 hover:border-slate-200")">
+                            <a href="?viewFile=@logFile.FileName" class="flex-1 min-w-0 pr-2">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-file-lines text-xs @(isSelected ? "text-indigo-600" : "text-slate-400")"></i>
+                                    <span class="text-xs font-semibold truncate block @(isSelected ? "text-indigo-700" : "text-slate-700")">@logFile.FileName</span>
+                                </div>
+                                <div class="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
+                                    <span><i class="fa-solid fa-weight-hanging mr-1"></i>@logFile.SizeFormatted</span>
+                                    <span><i class="fa-solid fa-clock mr-1"></i>@logFile.LastModified.ToString("HH:mm:ss")</span>
+                                </div>
+                            </a>
+                            
+                            <form method="post" asp-page-handler="Delete" asp-route-fileName="@logFile.FileName" class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition" onsubmit="return confirm('@logFile.FileName günlük dosyasını silmek istediğinize emin misiniz?');">
+                                <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Sil">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Log Content Viewer -->
+        <div class="lg:col-span-2 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm min-h-[500px]">
+            @if (string.IsNullOrEmpty(Model.SelectedLogName))
+            {
+                <div class="flex-1 flex flex-col items-center justify-center text-center py-12 text-slate-400">
+                    <div class="w-16 h-16 bg-slate-50 border border-slate-150 rounded-2xl flex items-center justify-center text-slate-350 mb-4 animate-pulse">
+                        <i class="fa-solid fa-code text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-slate-700 text-sm">Günlük İçeriği</h4>
+                    <p class="text-xs mt-1 max-w-sm">İçeriğini satır satır incelemek istediğiniz log dosyasını sol taraftaki listeden seçin.</p>
+                </div>
+            }
+            else
+            {
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <h4 class="font-bold text-slate-800 text-sm truncate">@Model.SelectedLogName</h4>
+                        </div>
+                        <p class="text-xs text-slate-450 mt-0.5">Dosyadan okunan son günlük satırları gösteriliyor.</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Refresher / Line selector -->
+                        <form method="get" class="flex items-center gap-1.5">
+                            <input type="hidden" name="viewFile" value="@Model.SelectedLogName" />
+                            <select name="lines" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="100">Son 100 Satır</option>
+                                <option value="250" selected>Son 250 Satır</option>
+                                <option value="500">Son 500 Satır</option>
+                                <option value="1000">Son 1000 Satır</option>
+                            </select>
+                            <a href="?viewFile=@Model.SelectedLogName" class="p-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl border border-slate-200 text-slate-500 transition" title="Yenile">
+                                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                            </a>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Live Log Screen (Terminal Theme) -->
+                <div class="flex-1 bg-zinc-950 border border-zinc-900 rounded-2xl p-4 flex flex-col font-mono text-[11px] text-zinc-350 leading-relaxed overflow-hidden">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3 text-[10px] text-zinc-500">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span class="ml-1 select-none font-bold">SYSTEM_LOG_CONSOLE</span>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('logContentText').innerText); alert('Günlük içeriği panoya kopyalandı.');" class="hover:text-zinc-300 transition" title="Kopyala">
+                            <i class="fa-solid fa-copy mr-1"></i>Kopyala
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-auto custom-scrollbar max-h-[500px]" id="logViewerContainer">
+                        <pre id="logContentText" class="whitespace-pre-wrap break-all pr-2">@Model.SelectedLogContent</pre>
+                    </div>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Scroll to the bottom of the log file so the latest entries are shown
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const container = document.getElementById('logViewerContainer');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+    </script>
+}

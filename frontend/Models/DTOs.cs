@@ -201,6 +201,7 @@ namespace SeedHR.Frontend.Models
         public string LeaveTypeId { get; set; } = null!;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public int DaysRequested { get; set; }
         public string Reason { get; set; } = null!;
     }
 
@@ -324,6 +325,15 @@ namespace SeedHR.Frontend.Models
         public string Description { get; set; } = null!;
         public string Requirements { get; set; } = null!;
         public int NumberOfPositions { get; set; }
+    }
+
+    public class UpdateJobPostingRequest
+    {
+        public string Title { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public string Requirements { get; set; } = null!;
+        public int NumberOfPositions { get; set; }
+        public string Status { get; set; } = null!;
     }
 
     public class InterviewDto
@@ -475,5 +485,13 @@ namespace SeedHR.Frontend.Models
         public string Message { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
+    }
+
+    public class LogFileDto
+    {
+        public string FileName { get; set; } = null!;
+        public long SizeInBytes { get; set; }
+        public DateTime LastModified { get; set; }
+        public string SizeFormatted { get; set; } = null!;
     }
 }

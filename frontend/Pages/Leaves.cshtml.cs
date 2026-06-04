@@ -82,6 +82,9 @@ namespace SeedHR.Frontend.Pages
                 return Page();
             }
 
+            // Auto-calculate days requested (business days inclusive)
+            NewLeave.DaysRequested = (int)(NewLeave.EndDate - NewLeave.StartDate).TotalDays + 1;
+
             var res = await _apiService.CreateLeaveRequestAsync(NewLeave);
             if (res.Success)
                 SuccessMessage = "İzin talebi başarıyla oluşturuldu.";

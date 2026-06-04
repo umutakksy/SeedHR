@@ -50,3 +50,12 @@ public class CreateJobPostingRequest
     public string Requirements { get; set; } = null!;
     public int NumberOfPositions { get; set; }
 }
+
+public class UpdateJobPostingRequest
+{
+    public string Title { get; set; } = null!;
+    public string Description { get; set; } = null!;
+    public string Requirements { get; set; } = null!;
+    public int NumberOfPositions { get; set; }
+    public string Status { get; set; } = null!;
+}

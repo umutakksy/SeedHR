@@ -136,6 +136,26 @@ public class RecruitmentService : IRecruitmentService
         return true;
     }
 
+    public async Task<JobPostingDto> UpdateJobPostingAsync(string id, UpdateJobPostingRequest request)
+    {
+        var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Job posting with ID {id} not found");
+
+        jobPosting.Title = request.Title;
+        jobPosting.Description = request.Description;
+        jobPosting.Requirements = request.Requirements;
+        jobPosting.NumberOfPositions = request.NumberOfPositions;
+        jobPosting.Status = request.Status;
+
+        if (request.Status == "Open")
+            jobPosting.ClosedDate = null;
+
+        await _unitOfWork.JobPostings.UpdateAsync(jobPosting);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<JobPostingDto>(jobPosting);
+    }
+
     public async Task<IEnumerable<JobPostingDto>> GetJobPostingsAsync()
     {
         var postings = await _unitOfWork.JobPostings.GetAllAsync();

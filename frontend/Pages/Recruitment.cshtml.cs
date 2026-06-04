@@ -96,6 +96,36 @@ namespace SeedHR.Frontend.Pages
             return Page();
         }
 
+        public async Task<IActionResult> OnPostReopenPostingAsync(string id)
+        {
+            // Fetch current posting data then re-open it
+            var posting = JobPostings.FirstOrDefault(p => p.Id == id);
+            if (posting == null)
+            {
+                ErrorMessage = "İş ilanı bulunamadı.";
+                await LoadDataAsync();
+                return Page();
+            }
+
+            var updateReq = new UpdateJobPostingRequest
+            {
+                Title = posting.Title,
+                Description = posting.Description,
+                Requirements = posting.Requirements,
+                NumberOfPositions = posting.NumberOfPositions,
+                Status = "Open"
+            };
+
+            var res = await _apiService.UpdateJobPostingAsync(id, updateReq);
+            if (res.Success)
+                SuccessMessage = "İş ilanı yeniden açıldı.";
+            else
+                ErrorMessage = res.Message ?? "İlan yeniden açılırken hata oluştu.";
+
+            await LoadDataAsync();
+            return Page();
+        }
+
         public async Task<IActionResult> OnPostUpdateCandidateStatusAsync(string id, string status)
         {
             var res = await _apiService.UpdateCandidateStatusAsync(id, status);

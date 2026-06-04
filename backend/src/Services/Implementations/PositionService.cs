@@ -83,6 +83,7 @@ public class PositionService : IPositionService
         position.Code = request.Code;
         position.Description = request.Description;
         position.DepartmentId = request.DepartmentId;
+        position.IsActive = request.IsActive;
 
         var updated = await _unitOfWork.Positions.UpdateAsync(position);
         await _unitOfWork.SaveChangesAsync();

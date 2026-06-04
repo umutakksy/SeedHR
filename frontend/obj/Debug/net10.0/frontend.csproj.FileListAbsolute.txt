@@ -95,3 +95,4 @@ D:\Projeler\SeedHR\frontend\obj\Debug\net10.0\refint\frontend.dll
 D:\Projeler\SeedHR\frontend\obj\Debug\net10.0\frontend.pdb
 D:\Projeler\SeedHR\frontend\obj\Debug\net10.0\frontend.genruntimeconfig.cache
 D:\Projeler\SeedHR\frontend\obj\Debug\net10.0\ref\frontend.dll
+D:\Projeler\SeedHR\frontend\obj\Debug\net10.0\frontend.sourcelink.json

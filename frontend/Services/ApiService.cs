@@ -212,19 +212,22 @@ namespace SeedHR.Frontend.Services
 
         // Leave Requests
         public Task<ApiResponse<IEnumerable<LeaveRequestDto>>> GetLeaveRequestsAsync()
-            => GetAsync<IEnumerable<LeaveRequestDto>>("Leave");
+            => GetAsync<IEnumerable<LeaveRequestDto>>("Leave/requests");
 
         public Task<ApiResponse<IEnumerable<LeaveRequestDto>>> GetMyLeaveRequestsAsync()
-            => GetAsync<IEnumerable<LeaveRequestDto>>("Leave/my");
+            => GetAsync<IEnumerable<LeaveRequestDto>>("Leave/requests");
 
         public Task<ApiResponse<LeaveRequestDto>> CreateLeaveRequestAsync(CreateLeaveRequestRequest request)
-            => PostAsync<CreateLeaveRequestRequest, LeaveRequestDto>("Leave", request);
+            => PostAsync<CreateLeaveRequestRequest, LeaveRequestDto>("Leave/requests", request);
 
         public Task<ApiResponse<LeaveRequestDto>> ApproveLeaveRequestAsync(string id, LeaveApprovalRequest request)
-            => PutAsync<LeaveApprovalRequest, LeaveRequestDto>($"Leave/{id}/approve", request);
+            => PutAsync<LeaveApprovalRequest, LeaveRequestDto>($"Leave/requests/{id}/approve", request);
+
+        public Task<ApiResponse<LeaveRequestDto>> RejectLeaveRequestAsync(string id, LeaveApprovalRequest request)
+            => PutAsync<LeaveApprovalRequest, LeaveRequestDto>($"Leave/requests/{id}/reject", request);
 
         public Task<ApiResponse<IEnumerable<LeaveBalanceDto>>> GetLeaveBalancesAsync(string userId)
-            => GetAsync<IEnumerable<LeaveBalanceDto>>($"Leave/balances/{userId}");
+            => GetAsync<IEnumerable<LeaveBalanceDto>>("Leave/balances");
 
         public Task<ApiResponse<IEnumerable<LeaveTypeDto>>> GetLeaveTypesAsync()
             => GetAsync<IEnumerable<LeaveTypeDto>>("Leave/types");
@@ -234,7 +237,7 @@ namespace SeedHR.Frontend.Services
             => GetAsync<IEnumerable<AttendanceDto>>("Attendance");
 
         public Task<ApiResponse<IEnumerable<AttendanceDto>>> GetMyAttendanceAsync()
-            => GetAsync<IEnumerable<AttendanceDto>>("Attendance/my");
+            => GetAsync<IEnumerable<AttendanceDto>>("Attendance/records");
 
         public Task<ApiResponse<AttendanceDto>> CheckInAsync()
             => PostAsync<object, AttendanceDto>("Attendance/checkin", new { });
@@ -294,7 +297,16 @@ namespace SeedHR.Frontend.Services
             => GetAsync<IEnumerable<CandidateDto>>("Recruitment/candidates");
 
         public Task<ApiResponse<CandidateDto>> UpdateCandidateStatusAsync(string id, string status)
-            => PutAsync<object, CandidateDto>($"Recruitment/candidates/{id}/status?status={status}", new { });
+            => PutAsync<object, CandidateDto>($"Recruitment/candidates/{id}/status", new { Status = status });
+
+        public Task<ApiResponse<JobPostingDto>> UpdateJobPostingAsync(string id, UpdateJobPostingRequest request)
+            => PutAsync<UpdateJobPostingRequest, JobPostingDto>($"Recruitment/job-postings/{id}", request);
+
+        public Task<HttpResponseMessage> DownloadCandidateCVAsync(string candidateId)
+        {
+            var client = GetClient();
+            return client.GetAsync($"Recruitment/candidates/{candidateId}/cv");
+        }
 
         public async Task<ApiResponse<CandidateDto>> ApplyToJobPostingAsync(string jobPostingId, CreateCandidateRequest candidateInfo, string cvFileName, Stream cvFileStream)
         {
@@ -359,5 +371,15 @@ namespace SeedHR.Frontend.Services
 
         public Task<ApiResponse<bool>> MarkNotificationAsReadAsync(string id)
             => PostAsync<object, bool>($"Notifications/{id}/read", new { });
+
+        // Logs
+        public Task<ApiResponse<IEnumerable<LogFileDto>>> GetLogFilesAsync()
+            => GetAsync<IEnumerable<LogFileDto>>("Logs");
+
+        public Task<ApiResponse<string>> ViewLogAsync(string fileName, int lines = 200)
+            => GetAsync<string>($"Logs/view/{fileName}?lines={lines}");
+
+        public Task<ApiResponse<bool>> DeleteLogFileAsync(string fileName)
+            => DeleteAsync<bool>($"Logs/{fileName}");
     }
 }

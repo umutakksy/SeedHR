@@ -66,6 +66,7 @@ public class DepartmentService : IDepartmentService
         department.Name = request.Name;
         department.Code = request.Code;
         department.Description = request.Description;
+        department.IsActive = request.IsActive;
 
         var updated = await _unitOfWork.Departments.UpdateAsync(department);
         await _unitOfWork.SaveChangesAsync();

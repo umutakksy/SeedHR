@@ -140,8 +140,35 @@ public class RecruitmentController : ControllerBase
     [HttpPut("candidates/{id}/status")]
     public async Task<ActionResult<ApiResponse<CandidateDto>>> UpdateCandidateStatus(string id, [FromBody] UpdateCandidateStatusRequest request)
     {
+        if (string.IsNullOrEmpty(request?.Status))
+            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("Status is required"));
         var candidate = await _recruitmentService.UpdateCandidateStatusAsync(id, request.Status);
         return Ok(ApiResponse<CandidateDto>.SuccessResponse(candidate, "Candidate status updated successfully"));
+    }
+
+    [HttpPut("job-postings/{id}")]
+    public async Task<ActionResult<ApiResponse<JobPostingDto>>> UpdateJobPosting(string id, [FromBody] UpdateJobPostingRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<JobPostingDto>.ErrorResponse("Invalid input"));
+
+        var jobPosting = await _recruitmentService.UpdateJobPostingAsync(id, request);
+        return Ok(ApiResponse<JobPostingDto>.SuccessResponse(jobPosting, "Job posting updated successfully"));
+    }
+
+    [HttpGet("candidates/{id}/cv")]
+    public async Task<IActionResult> DownloadCandidateCV(string id)
+    {
+        var candidate = await _recruitmentService.GetCandidateByIdAsync(id);
+        if (candidate == null || string.IsNullOrEmpty(candidate.CVPath))
+            return NotFound("CV not found");
+
+        if (!System.IO.File.Exists(candidate.CVPath))
+            return NotFound("CV file not found on server");
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(candidate.CVPath);
+        var fileName = $"{candidate.FullName.Replace(" ", "_")}_CV{System.IO.Path.GetExtension(candidate.CVPath)}";
+        return File(bytes, "application/octet-stream", fileName);
     }
 
     [HttpGet("interviews")]
@@ -173,3 +200,4 @@ public class UpdateCandidateStatusRequest
 {
     public string Status { get; set; } = null!;
 }
+

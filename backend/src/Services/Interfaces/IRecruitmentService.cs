@@ -17,6 +17,7 @@ public interface IRecruitmentService
     Task<IEnumerable<JobPostingDto>> GetJobPostingsAsync();
     Task<bool> CloseJobPostingAsync(string jobPostingId);
 
+    Task<JobPostingDto> UpdateJobPostingAsync(string id, UpdateJobPostingRequest request);
     Task<InterviewDto> CreateInterviewAsync(CreateInterviewRequest request);
     Task<IEnumerable<InterviewDto>> GetInterviewsAsync();
     Task<InterviewDto> CompleteInterviewAsync(string id, CompleteInterviewRequest request);

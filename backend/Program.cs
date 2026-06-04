@@ -36,7 +36,14 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Suppress default model validation error format so our custom middleware handles it
+        // The default format returns errors as Dictionary which doesn't match our List<string> ApiResponse
+        options.SuppressModelStateInvalidFilter = true;
+    });
+builder.Services.AddHttpClient(); // For AiController (Groq API calls)
 
 // Add MongoDB configuration
 builder.Services.Configure<MongoDbSettings>(

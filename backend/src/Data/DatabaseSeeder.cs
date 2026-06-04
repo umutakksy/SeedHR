@@ -18,6 +18,8 @@ public static class DatabaseSeeder
         await context.Announcements.DeleteManyAsync(_ => true);
         await context.Attendances.DeleteManyAsync(_ => true);
         await context.LeaveRequests.DeleteManyAsync(_ => true);
+        await context.LeaveTypes.DeleteManyAsync(_ => true);
+        await context.LeaveBalances.DeleteManyAsync(_ => true);
         await context.PerformanceEvaluations.DeleteManyAsync(_ => true);
         await context.JobPostings.DeleteManyAsync(_ => true);
         await context.Candidates.DeleteManyAsync(_ => true);
@@ -64,7 +66,7 @@ public static class DatabaseSeeder
         await context.Positions.InsertManyAsync(positions);
 
         // 4. Seed Users
-        var hash = passwordHasher.Hash("admin");
+        var hash = passwordHasher.Hash("adalarsahili@@##");
         var ikHash = passwordHasher.Hash("hr1234");
         var empHash = passwordHasher.Hash("employee");
         var managerHash = passwordHasher.Hash("manager");
@@ -296,5 +298,39 @@ public static class DatabaseSeeder
             }
         };
         await context.JobPostings.InsertManyAsync(postings);
+
+        // 10. Seed Leave Types
+        var leaveTypes = new List<LeaveType>
+        {
+            new LeaveType { Id = "lt_annual", Name = "Yıllık İzin", Code = "YILLIK", Description = "Yıllık ücretli izin", DefaultDays = 15, RequiresApproval = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new LeaveType { Id = "lt_sick", Name = "Hastalık İzni", Code = "HASTALIK", Description = "Hastalık nedeniyle kullanılan izin", DefaultDays = 10, RequiresApproval = false, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new LeaveType { Id = "lt_excuse", Name = "Mazeret İzni", Code = "MAZERET", Description = "Özel durum ve mazeret izni", DefaultDays = 5, RequiresApproval = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new LeaveType { Id = "lt_unpaid", Name = "Ücretsiz İzin", Code = "UCRETSIZ", Description = "Ücretsiz olarak kullanılan ek izin", DefaultDays = 30, RequiresApproval = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new LeaveType { Id = "lt_maternity", Name = "Doğum/Babalık İzni", Code = "DOGUM", Description = "Doğum ve babalık izni", DefaultDays = 60, RequiresApproval = true, IsActive = true, CreatedAt = DateTime.UtcNow }
+        };
+        await context.LeaveTypes.InsertManyAsync(leaveTypes);
+
+        // 11. Seed Leave Balances for all users
+        var currentYear = DateTime.UtcNow.Year;
+        var userIds = new[] { "user_admin", "user_hr", "user_manager", "user_employee" };
+        var balancesToInsert = new List<LeaveBalance>();
+        int balIdx = 0;
+        foreach (var uid in userIds)
+        {
+            foreach (var lt in leaveTypes)
+            {
+                balancesToInsert.Add(new LeaveBalance
+                {
+                    Id = $"lb_{balIdx++}",
+                    UserId = uid,
+                    LeaveTypeId = lt.Id,
+                    Year = currentYear,
+                    TotalDays = lt.DefaultDays,
+                    UsedDays = 0,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+        await context.LeaveBalances.InsertManyAsync(balancesToInsert);
     }
 }
