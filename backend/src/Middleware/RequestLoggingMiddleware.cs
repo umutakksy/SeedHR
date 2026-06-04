@@ -17,15 +17,17 @@ public class RequestLoggingMiddleware
         var startTime = DateTime.UtcNow;
         var userId = context.User?.FindFirst("sub")?.Value ?? "Anonymous";
         var requestPath = context.Request.Path;
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
 
         using (LogContext.PushProperty("UserId", userId))
         using (LogContext.PushProperty("RequestPath", requestPath))
         {
             Log.Information(
-                "HTTP {Method} {Path} started by {UserId}",
+                "HTTP {Method} {Path} started by {UserId} | Auth: {AuthHeader}",
                 context.Request.Method,
                 requestPath,
-                userId
+                userId,
+                string.IsNullOrEmpty(authHeader) ? "NONE" : "Bearer..."
             );
 
             await _next(context);
