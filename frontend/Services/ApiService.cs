@@ -32,13 +32,30 @@ namespace SeedHR.Frontend.Services
 
             // Check if user is authenticated and has a token claim
             var context = _httpContextAccessor.HttpContext;
-            if (context?.User?.Identity?.IsAuthenticated == true)
+            if (context == null)
+            {
+                Console.WriteLine("[ApiService] WARNING: HttpContext is null");
+                return client;
+            }
+
+            if (context.User?.Identity?.IsAuthenticated == true)
             {
                 var token = context.User.FindFirst("Token")?.Value;
                 if (!string.IsNullOrEmpty(token))
                 {
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    Console.WriteLine("[ApiService] Token found and added to Authorization header");
                 }
+                else
+                {
+                    Console.WriteLine("[ApiService] WARNING: User is authenticated but Token claim is empty or null");
+                    var allClaims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+                    Console.WriteLine($"[ApiService] Available claims: {allClaims}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("[ApiService] WARNING: User is not authenticated in HttpContext");
             }
 
             return client;
