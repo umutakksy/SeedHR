@@ -131,9 +131,9 @@ namespace SeedHR.Frontend.Pages
                 return Page();
             }
 
-            if (NewEvaluation.Score < 1 || NewEvaluation.Score > 5 || string.IsNullOrEmpty(NewEvaluation.Comments) || string.IsNullOrEmpty(NewEvaluation.Period))
+            if (NewEvaluation.Rating < 1 || NewEvaluation.Rating > 5 || string.IsNullOrEmpty(NewEvaluation.Period))
             {
-                ErrorMessage = "Puan 1-5 arasında olmalı ve değerlendirme dönemi/yorumlar doldurulmalıdır.";
+                ErrorMessage = "Puan 1-5 arasında olmalı ve dönem seçilmelidir.";
                 await LoadDataAsync();
                 return Page();
             }

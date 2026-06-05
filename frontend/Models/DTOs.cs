@@ -471,9 +471,11 @@ namespace SeedHR.Frontend.Models
     public class CreatePerformanceEvaluationRequest
     {
         public string UserId { get; set; } = null!;
-        public double Score { get; set; }
-        public string Comments { get; set; } = null!;
+        public int Rating { get; set; }
         public string Period { get; set; } = null!;
+        public string? Strengths { get; set; }
+        public string? AreasForImprovement { get; set; }
+        public string? Comments { get; set; }
     }
 
     public class RoleDto
