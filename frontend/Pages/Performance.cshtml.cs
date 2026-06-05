@@ -86,9 +86,16 @@ namespace SeedHR.Frontend.Pages
                 return Page();
             }
 
-            if (string.IsNullOrEmpty(NewGoal.Title) || string.IsNullOrEmpty(NewGoal.Description) || NewGoal.TargetDate == DateTime.MinValue)
+            if (string.IsNullOrEmpty(NewGoal.Title) || string.IsNullOrEmpty(NewGoal.Description) || NewGoal.StartDate == DateTime.MinValue || NewGoal.DueDate == DateTime.MinValue)
             {
                 ErrorMessage = "Lütfen tüm hedef alanlarını doldurun.";
+                await LoadDataAsync();
+                return Page();
+            }
+
+            if (NewGoal.StartDate.Date >= NewGoal.DueDate.Date)
+            {
+                ErrorMessage = "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.";
                 await LoadDataAsync();
                 return Page();
             }

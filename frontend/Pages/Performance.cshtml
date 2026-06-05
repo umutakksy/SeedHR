@@ -104,7 +104,9 @@
                                 <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-indigo-50 border border-indigo-100 text-indigo-655">
                                     Ağırlık: %@goal.Weight
                                 </span>
-                                <span class="text-[9px] text-slate-500 font-semibold">Hedef Tarih: @goal.TargetDate.ToString("dd.MM.yyyy")</span>
+                                <span class="text-[9px] text-slate-500 font-semibold">
+                                    @goal.StartDate.ToString("dd.MM.yyyy") - @goal.DueDate.ToString("dd.MM.yyyy")
+                                </span>
                             </div>
                             <h4 class="text-xs font-bold text-slate-800">@goal.Title</h4>
                             <p class="text-[11px] text-slate-550 font-medium">@goal.Description</p>
@@ -225,13 +227,26 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ağırlık (%)</label>
-                        <input type="number" asp-for="NewGoal.Weight" required min="1" max="100" value="25" 
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Başlangıç Tarihi</label>
+                        <input type="date" asp-for="NewGoal.StartDate" required
                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Hedef Tarih</label>
-                        <input type="date" asp-for="NewGoal.TargetDate" required 
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Bitiş Tarihi</label>
+                        <input type="date" asp-for="NewGoal.DueDate" required
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ağırlık (%)</label>
+                        <input type="number" asp-for="NewGoal.Weight" required min="1" max="100" value="25"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Hedef İlerleme (%)</label>
+                        <input type="number" asp-for="NewGoal.TargetProgress" required min="1" max="100" value="100"
                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-850 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
                     </div>
                 </div>

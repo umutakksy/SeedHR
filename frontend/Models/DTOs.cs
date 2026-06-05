@@ -436,17 +436,22 @@ namespace SeedHR.Frontend.Models
         public string EmployeeName { get; set; } = null!;
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
-        public DateTime TargetDate { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime DueDate { get; set; }
         public string Status { get; set; } = null!; // Pending, InProgress, Achieved, NotAchieved
         public int Weight { get; set; }
+        public int TargetProgress { get; set; }
+        public int CurrentProgress { get; set; }
     }
 
     public class CreatePerformanceGoalRequest
     {
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
-        public DateTime TargetDate { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime DueDate { get; set; }
         public int Weight { get; set; }
+        public int TargetProgress { get; set; } = 100;
         public string Status { get; set; } = "Pending";
     }
 
