@@ -391,16 +391,16 @@ namespace SeedHR.Frontend.Services
 
         // Performance
         public Task<ApiResponse<IEnumerable<PerformanceGoalDto>>> GetPerformanceGoalsAsync(string userId)
-            => GetAsync<IEnumerable<PerformanceGoalDto>>($"Performance/goals/{userId}");
+            => GetAsync<IEnumerable<PerformanceGoalDto>>($"Performance/goals/user/{userId}");
 
         public Task<ApiResponse<PerformanceGoalDto>> CreatePerformanceGoalAsync(string userId, CreatePerformanceGoalRequest request)
-            => PostAsync<CreatePerformanceGoalRequest, PerformanceGoalDto>($"Performance/goals/{userId}", request);
+            => PostAsync<CreatePerformanceGoalRequest, PerformanceGoalDto>($"Performance/goals?userId={userId}", request);
 
         public Task<ApiResponse<PerformanceGoalDto>> UpdatePerformanceGoalStatusAsync(string id, string status)
             => PutAsync<object, PerformanceGoalDto>($"Performance/goals/{id}/status?status={status}", new { });
 
         public Task<ApiResponse<IEnumerable<PerformanceEvaluationDto>>> GetPerformanceEvaluationsAsync(string userId)
-            => GetAsync<IEnumerable<PerformanceEvaluationDto>>($"Performance/evaluations/{userId}");
+            => GetAsync<IEnumerable<PerformanceEvaluationDto>>($"Performance/evaluations/user/{userId}");
 
         public Task<ApiResponse<PerformanceEvaluationDto>> CreatePerformanceEvaluationAsync(CreatePerformanceEvaluationRequest request)
             => PostAsync<CreatePerformanceEvaluationRequest, PerformanceEvaluationDto>("Performance/evaluations", request);

@@ -69,6 +69,13 @@ public class RecruitmentController : ControllerBase
         return Created("", ApiResponse<JobPostingDto>.SuccessResponse(jobPosting, "Job posting created successfully"));
     }
 
+    [HttpGet("job-postings/all")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<JobPostingDto>>>> GetJobPostings()
+    {
+        var postings = await _recruitmentService.GetJobPostingsAsync();
+        return Ok(ApiResponse<IEnumerable<JobPostingDto>>.SuccessResponse(postings, "All job postings retrieved successfully"));
+    }
+
     [HttpGet("job-postings/{id}")]
     public async Task<ActionResult<ApiResponse<JobPostingDto>>> GetJobPosting(string id)
     {
@@ -161,12 +168,7 @@ public class RecruitmentController : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Job posting closed successfully"));
     }
 
-    [HttpGet("job-postings/all")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<JobPostingDto>>>> GetJobPostings()
-    {
-        var postings = await _recruitmentService.GetJobPostingsAsync();
-        return Ok(ApiResponse<IEnumerable<JobPostingDto>>.SuccessResponse(postings, "All job postings retrieved successfully"));
-    }
+
 
     [HttpPut("candidates/{id}/status")]
     public async Task<ActionResult<ApiResponse<CandidateDto>>> UpdateCandidateStatus(string id, [FromBody] UpdateCandidateStatusRequest request)

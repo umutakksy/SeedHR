@@ -690,6 +690,17 @@ public static class DatabaseSeeder
                 PublishedDate = DateTime.UtcNow.AddDays(-1),
                 CreatedBy = "user_hr",
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new Announcement
+            {
+                Id = "ann_3",
+                Title = "Günün Nefis Yemek Menüsü",
+                Content = "Ezogelin Çorbası\nKadınbudu Köfte\nPirinç Pilavı\nMevsim Salatası\nKemalpaşa Tatlısı",
+                Category = "YemekMenusu",
+                Status = "Published",
+                PublishedDate = DateTime.UtcNow,
+                CreatedBy = "Sistem Yönetici",
+                CreatedAt = DateTime.UtcNow
             }
         };
         await context.Announcements.InsertManyAsync(announcements);

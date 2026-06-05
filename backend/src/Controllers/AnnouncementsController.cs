@@ -41,19 +41,21 @@ public class AnnouncementsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "HR")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ActionResult<ApiResponse<AnnouncementDto>>> CreateAnnouncement([FromBody] CreateAnnouncementRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse<AnnouncementDto>.ErrorResponse("Invalid input"));
 
-        var createdBy = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var createdBy = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value 
+                        ?? User.FindFirst("sub")?.Value 
+                        ?? "Sistem";
         var announcement = await _announcementService.CreateAnnouncementAsync(createdBy, request);
         return Created("", ApiResponse<AnnouncementDto>.SuccessResponse(announcement, "Announcement created successfully"));
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "HR")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ActionResult<ApiResponse<AnnouncementDto>>> UpdateAnnouncement(string id, [FromBody] UpdateAnnouncementRequest request)
     {
         if (!ModelState.IsValid)
@@ -64,7 +66,7 @@ public class AnnouncementsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "HR")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteAnnouncement(string id)
     {
         var result = await _announcementService.DeleteAnnouncementAsync(id);

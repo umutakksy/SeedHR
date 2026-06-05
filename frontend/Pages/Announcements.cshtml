@@ -64,7 +64,12 @@
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="px-2.5 py-0.5 text-[9px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 text-indigo-650 dark:text-indigo-400">
-                                @announcement.Category
+                                @(announcement.Category == "Genel" ? "Genel Duyuru" :
+                                  announcement.Category == "Etkinlik" ? "Şirket İçi Etkinlik" :
+                                  announcement.Category == "İzin" ? "Resmi Tatil / İzin" :
+                                  announcement.Category == "IK" ? "İK Güncellemesi" :
+                                  announcement.Category == "YemekMenusu" ? "Yemek Menüsü" :
+                                  announcement.Category)
                             </span>
                             <span class="text-[10px] text-slate-500 dark:text-zinc-400 font-semibold flex items-center gap-1">
                                 <i class="fa-solid fa-clock"></i> @announcement.PublishedDate.ToString("dd MMMM yyyy")
@@ -77,9 +82,9 @@
                     <div class="border-t border-slate-100 dark:border-zinc-850 pt-4 mt-2 flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <div class="w-6 h-6 rounded bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 flex items-center justify-center text-[10px] font-bold">
-                                @announcement.CreatedBy.Substring(0, Math.Min(2, announcement.CreatedBy.Length)).ToUpper()
+                                @(!string.IsNullOrEmpty(announcement.CreatedBy) ? announcement.CreatedBy.Substring(0, Math.Min(2, announcement.CreatedBy.Length)).ToUpper() : "ST")
                             </div>
-                            <span class="text-[10px] text-slate-550 dark:text-zinc-450 font-semibold">Yayınlayan: <strong class="text-slate-800 dark:text-white">@announcement.CreatedBy</strong></span>
+                            <span class="text-[10px] text-slate-550 dark:text-zinc-455 font-semibold">Yayınlayan: <strong class="text-slate-800 dark:text-white">@(announcement.CreatedBy ?? "Sistem")</strong></span>
                         </div>
 
                         @if (isHrOrAdmin)
@@ -107,11 +112,11 @@
                 </button>
             </div>
 
-            <form method="post" class="space-y-4">
+            <form method="post" asp-page-handler="Create" class="space-y-4">
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Duyuru Başlığı</label>
                     <input type="text" asp-for="NewAnnouncement.Title" required placeholder="Örn: Bayram İzni Hakkında Duyuru" 
-                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
+                           class="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-slate-855 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition" />
                 </div>
 
                 <div>
@@ -122,6 +127,7 @@
                         <option value="Etkinlik">Şirket İçi Etkinlik</option>
                         <option value="İzin">Resmi Tatil / İzin</option>
                         <option value="IK">İK Güncellemeleri</option>
+                        <option value="YemekMenusu">Günün Yemek Menüsü</option>
                     </select>
                 </div>
 

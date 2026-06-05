@@ -31,17 +31,46 @@ namespace SeedHR.Frontend.Pages
             var response = await _apiService.GetPublicAnnouncementsAsync();
             if (response != null && response.Success && response.Data != null)
             {
-                Announcements = response.Data.OrderByDescending(a => a.PublishedDate).ToList();
+                var allAnnouncements = response.Data.ToList();
+                
+                // Find latest Menu of the Day announcement
+                var menuAnnouncement = allAnnouncements
+                    .Where(a => a.Category == "YemekMenusu")
+                    .OrderByDescending(a => a.PublishedDate)
+                    .FirstOrDefault();
+
+                if (menuAnnouncement != null)
+                {
+                    // Split the content by newlines or commas
+                    GununMenusu = menuAnnouncement.Content
+                        .Split(new[] { '\n', '\r', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(item => item.Trim())
+                        .Where(item => !string.IsNullOrEmpty(item))
+                        .ToList();
+                }
+                else
+                {
+                    // Fallback to day of week menu
+                    GenerateMenu(DateTime.UtcNow.AddHours(3).DayOfWeek);
+                }
+
+                // Filter out the YemekMenusu from the main announcements stream
+                Announcements = allAnnouncements
+                    .Where(a => a.Category != "YemekMenusu")
+                    .OrderByDescending(a => a.PublishedDate)
+                    .ToList();
+            }
+            else
+            {
+                // Fallback menu
+                GenerateMenu(DateTime.UtcNow.AddHours(3).DayOfWeek);
             }
 
             // 2. Format today's date in Turkish
             var turkishCulture = new System.Globalization.CultureInfo("tr-TR");
             BugununTarihi = DateTime.UtcNow.AddHours(3).ToString("dd MMMM yyyy, dddd", turkishCulture);
 
-            // 3. Generate dynamic menu of the day based on day of week
-            GenerateMenu(DateTime.UtcNow.AddHours(3).DayOfWeek);
-
-            // 4. Generate dynamic mock weather info
+            // 3. Generate dynamic mock weather info
             GenerateWeather();
         }
 

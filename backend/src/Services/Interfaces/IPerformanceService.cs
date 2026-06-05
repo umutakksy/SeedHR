@@ -8,6 +8,7 @@ public interface IPerformanceService
     Task<PerformanceGoalDto> GetGoalByIdAsync(string id);
     Task<IEnumerable<PerformanceGoalDto>> GetUserGoalsAsync(string userId);
     Task<PerformanceGoalDto> UpdateGoalProgressAsync(string id, int progress);
+    Task<PerformanceGoalDto> UpdateGoalStatusAsync(string id, string status);
     Task<bool> DeleteGoalAsync(string id);
 
     Task<PerformanceEvaluationDto> CreateEvaluationAsync(string evaluatorId, CreatePerformanceEvaluationRequest request);

@@ -80,6 +80,28 @@ public class PerformanceService : IPerformanceService
         return await _unitOfWork.PerformanceGoals.DeleteAsync(id);
     }
 
+    public async Task<PerformanceGoalDto> UpdateGoalStatusAsync(string id, string status)
+    {
+        var goal = await _unitOfWork.PerformanceGoals.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Performance goal with ID {id} not found");
+
+        goal.Status = status;
+        if (status == "Completed" || status == "Achieved")
+        {
+            goal.CurrentProgress = 100;
+        }
+        else if (status == "InProgress")
+        {
+            goal.Status = "InProgress";
+            if (goal.CurrentProgress == 0) goal.CurrentProgress = 10;
+        }
+
+        var updated = await _unitOfWork.PerformanceGoals.UpdateAsync(goal);
+        await _unitOfWork.SaveChangesAsync();
+
+        return _mapper.Map<PerformanceGoalDto>(updated);
+    }
+
     public async Task<PerformanceEvaluationDto> CreateEvaluationAsync(string evaluatorId, CreatePerformanceEvaluationRequest request)
     {
         if (request.Rating < 1 || request.Rating > 5)

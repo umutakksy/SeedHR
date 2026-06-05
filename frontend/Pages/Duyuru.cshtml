@@ -148,7 +148,12 @@
                                         <!-- Header line -->
                                         <div class="flex items-center gap-3">
                                             <span class="text-[10px] font-bold tracking-wider uppercase bg-brand-50 text-brand-600 px-2 py-0.5 rounded-md">
-                                                @announcement.Category
+                                                @(announcement.Category == "Genel" ? "Genel Duyuru" :
+                                                  announcement.Category == "Etkinlik" ? "Şirket İçi Etkinlik" :
+                                                  announcement.Category == "İzin" ? "Resmi Tatil / İzin" :
+                                                  announcement.Category == "IK" ? "İK Güncellemesi" :
+                                                  announcement.Category == "YemekMenusu" ? "Yemek Menüsü" :
+                                                  announcement.Category)
                                             </span>
                                             <span class="text-[11px] font-medium text-slate-400 flex items-center gap-1.5">
                                                 <i class="fa-regular fa-clock"></i>

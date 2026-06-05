@@ -82,5 +82,43 @@ public class MongoDbContext : IMongoDbContext
         await Announcements.Indexes.CreateOneAsync(
             new CreateIndexModel<Announcement>(Builders<Announcement>.IndexKeys.Ascending(a => a.PublishedDate))
         );
+        await Announcements.Indexes.CreateOneAsync(
+            new CreateIndexModel<Announcement>(Builders<Announcement>.IndexKeys.Ascending(a => a.Category))
+        );
+
+        // Attendance indexes
+        await Attendances.Indexes.CreateOneAsync(
+            new CreateIndexModel<Attendance>(Builders<Attendance>.IndexKeys.Ascending(a => a.UserId))
+        );
+        await Attendances.Indexes.CreateOneAsync(
+            new CreateIndexModel<Attendance>(Builders<Attendance>.IndexKeys.Ascending(a => a.CheckInTime))
+        );
+
+        // PerformanceGoal indexes
+        await PerformanceGoals.Indexes.CreateOneAsync(
+            new CreateIndexModel<PerformanceGoal>(Builders<PerformanceGoal>.IndexKeys.Ascending(pg => pg.UserId))
+        );
+        await PerformanceEvaluations.Indexes.CreateOneAsync(
+            new CreateIndexModel<PerformanceEvaluation>(Builders<PerformanceEvaluation>.IndexKeys.Ascending(pe => pe.UserId))
+        );
+
+        // Candidates indexes
+        await Candidates.Indexes.CreateOneAsync(
+            new CreateIndexModel<Candidate>(Builders<Candidate>.IndexKeys.Ascending(c => c.Email),
+                new CreateIndexOptions { Unique = false })
+        );
+        await Candidates.Indexes.CreateOneAsync(
+            new CreateIndexModel<Candidate>(Builders<Candidate>.IndexKeys.Ascending(c => c.Status))
+        );
+
+        // LeaveBalance indexes
+        await LeaveBalances.Indexes.CreateOneAsync(
+            new CreateIndexModel<LeaveBalance>(Builders<LeaveBalance>.IndexKeys.Ascending(lb => lb.UserId))
+        );
+
+        // WorkSchedule indexes
+        await WorkSchedules.Indexes.CreateOneAsync(
+            new CreateIndexModel<WorkSchedule>(Builders<WorkSchedule>.IndexKeys.Ascending(ws => ws.Date))
+        );
     }
 }

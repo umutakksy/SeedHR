@@ -27,6 +27,7 @@ services:
       - mongodb
     volumes:
       - backend-uploads:/app/uploads
+      - backend-keys:/root/.aspnet/DataProtection-Keys
     restart: always
 
   frontend:
@@ -58,3 +59,4 @@ services:
 volumes:
   mongo-data:
   backend-uploads:
+  backend-keys:

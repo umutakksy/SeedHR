@@ -83,6 +83,25 @@ public class PerformanceController : ControllerBase
         return Ok(ApiResponse<PerformanceGoalDto>.SuccessResponse(updated, "Goal progress updated successfully"));
     }
 
+    [HttpPut("goals/{id}/status")]
+    public async Task<ActionResult<ApiResponse<PerformanceGoalDto>>> UpdateGoalStatus(string id, [FromQuery] string status)
+    {
+        var goal = await _performanceService.GetGoalByIdAsync(id);
+        if (goal == null)
+            return NotFound(ApiResponse<PerformanceGoalDto>.ErrorResponse("Performance goal not found"));
+
+        var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+
+        if (role != "Admin" && role != "Manager" && role != "HR" && currentUserId != goal.UserId)
+        {
+            return Forbid();
+        }
+
+        var updated = await _performanceService.UpdateGoalStatusAsync(id, status);
+        return Ok(ApiResponse<PerformanceGoalDto>.SuccessResponse(updated, "Goal status updated successfully"));
+    }
+
     [HttpDelete("goals/{id}")]
     [Authorize(Roles = "Admin,Manager,HR")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteGoal(string id)
