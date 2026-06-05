@@ -23,8 +23,11 @@ public class PerformanceService : IPerformanceService
         var user = await _unitOfWork.Users.GetByIdAsync(userId)
             ?? throw new NotFoundException($"User with ID {userId} not found");
 
-        if (request.StartDate >= request.DueDate)
-            throw new ValidationException("Start date must be before due date");
+        var startDateOnly = request.StartDate.Date;
+        var dueDateOnly = request.DueDate.Date;
+
+        if (startDateOnly >= dueDateOnly)
+            throw new ValidationException("Due date must be after start date");
 
         var goal = new PerformanceGoal
         {
