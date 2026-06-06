@@ -6,9 +6,20 @@ import { useAppStore } from "@/lib/store";
 import { authAPI } from "@/lib/api";
 import { Key, Mail } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
-import { Turnstile, TurnstileInstance } from "@marsidev/react-turnstile";
 
-const TURNSTILE_SITE_KEY = "0x4AAAAAAADe7I-LrRFWQeph8";
+// Site key doğrudan sabit olarak tanımlandı — herhangi bir env değişkeni kullanılmıyor
+const SITE_KEY = "0x4AAAAAAADe7I-LrRFWQeph8";
+
+declare global {
+  interface Window {
+    turnstile: {
+      render: (container: string | HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+    onloadTurnstileCallback: () => void;
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +28,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileInstance>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -28,6 +40,62 @@ export default function LoginPage() {
       router.push("/");
     }
   }, [currentUser]);
+
+  // Turnstile'ı Cloudflare'in resmi script'i ile yükle
+  useEffect(() => {
+    const renderWidget = () => {
+      if (!containerRef.current || !window.turnstile) return;
+      // Önceki widget'ı temizle
+      if (widgetIdRef.current) {
+        try { window.turnstile.remove(widgetIdRef.current); } catch {}
+        widgetIdRef.current = null;
+      }
+      containerRef.current.innerHTML = "";
+      widgetIdRef.current = window.turnstile.render(containerRef.current, {
+        sitekey: SITE_KEY,
+        theme: "light",
+        language: "tr",
+        callback: (token: string) => setCaptchaToken(token),
+        "expired-callback": () => setCaptchaToken(null),
+        "error-callback": () => {
+          setCaptchaToken(null);
+          toast.error("CAPTCHA yüklenemedi. Sayfayı yenileyin.");
+        },
+      });
+    };
+
+    // Script zaten yüklüyse direkt render et
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    // Henüz yüklenmediyse callback ekle ve script'i DOM'a ekle
+    window.onloadTurnstileCallback = renderWidget;
+
+    const existing = document.getElementById("cf-turnstile-script");
+    if (!existing) {
+      const script = document.createElement("script");
+      script.id = "cf-turnstile-script";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try { window.turnstile.remove(widgetIdRef.current); } catch {}
+      }
+    };
+  }, []);
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    if (widgetIdRef.current && window.turnstile) {
+      try { window.turnstile.reset(widgetIdRef.current); } catch {}
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +119,11 @@ export default function LoginPage() {
         router.push("/");
       } else {
         toast.error(res.message || "Giriş başarısız");
-        turnstileRef.current?.reset();
-        setCaptchaToken(null);
+        resetCaptcha();
       }
     } catch (err) {
       toast.error("Giriş sırasında hata oluştu. E-posta veya şifre hatalı.");
-      turnstileRef.current?.reset();
-      setCaptchaToken(null);
+      resetCaptcha();
     } finally {
       setLoading(false);
     }
@@ -132,25 +198,9 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Cloudflare Turnstile */}
+            {/* Cloudflare Turnstile — native script yükleme */}
             <div className="flex justify-center py-1">
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={(token) => setCaptchaToken(token)}
-                onExpire={() => {
-                  setCaptchaToken(null);
-                  turnstileRef.current?.reset();
-                }}
-                onError={() => {
-                  setCaptchaToken(null);
-                  toast.error("CAPTCHA yüklenemedi. Sayfayı yenileyin.");
-                }}
-                options={{
-                  theme: "auto",
-                  language: "tr",
-                }}
-              />
+              <div ref={containerRef} />
             </div>
 
             <button
