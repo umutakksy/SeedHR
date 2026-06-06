@@ -1,15 +1,10 @@
-# ---- Dependencies ----
-FROM node:20-alpine AS deps
+# ---- Builder ----
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# ---- Builder ----
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
