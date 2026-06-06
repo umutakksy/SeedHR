@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8faf9;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  /* Brand corporate green matching seed.hr */
+  --color-indigo-50: #f2faf6;
+  --color-indigo-100: #e2f5ec;
+  --color-indigo-200: #c5ebda;
+  --color-indigo-300: #9adbc0;
+  --color-indigo-400: #66c49e;
+  --color-indigo-500: #3da87d;
+  --color-indigo-600: #0ba360;
+  --color-indigo-700: #0b804c;
+  --color-indigo-800: #0a663f;
+  --color-indigo-900: #085334;
+  --color-indigo-950: #042e1d;
+  
+  /* Corporate grays */
+  --color-slate-50: #f8faf9;
+  --color-slate-100: #f0f4f2;
+  --color-slate-200: #e1e8e4;
+  --color-slate-300: #cad4cf;
+  --color-slate-400: #9cb0a6;
+  --color-slate-500: #738a80;
+  --color-slate-600: #576b63;
+  --color-slate-700: #44544d;
+  --color-slate-800: #33403a;
+  --color-slate-900: #1b2420;
+  --color-slate-950: #0d1210;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b120f;
+    --foreground: #f1f5f3;
+  }
+}
+
+/* Base resets & premium typography details */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.dark body,
+.dark {
+  --background: #0b120f;
+  --foreground: #f1f5f3;
+}
+
+/* Custom scrollbars for a premium corporate look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-indigo-100);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-indigo-200);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-slate-800);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-700);
+}

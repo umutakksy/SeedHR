@@ -26,6 +26,15 @@ public static class DatabaseSeeder
         await context.CandidateApplications.DeleteManyAsync(_ => true);
         await context.Interviews.DeleteManyAsync(_ => true);
         await context.WorkSchedules.DeleteManyAsync(_ => true);
+        await context.Courses.DeleteManyAsync(_ => true);
+        await context.CourseAssignments.DeleteManyAsync(_ => true);
+        await context.CompetencyForms.DeleteManyAsync(_ => true);
+        await context.Evaluations360.DeleteManyAsync(_ => true);
+        await context.ReferenceChecks.DeleteManyAsync(_ => true);
+        await context.Payrolls.DeleteManyAsync(_ => true);
+        await context.ExpenseRequests.DeleteManyAsync(_ => true);
+        await context.EmployeeShifts.DeleteManyAsync(_ => true);
+        await context.VisitorLogs.DeleteManyAsync(_ => true);
 
         // 1. Seed Roles
         var roles = new List<Role>
@@ -658,11 +667,14 @@ public static class DatabaseSeeder
             }
         };
 
+        var locations = new[] { "İstanbul Merkez", "Ankara Şube", "İzmir Fabrika" };
+        int userLocIdx = 0;
         foreach (var u in users)
         {
             u.Department = depts.Find(d => d.Id == u.DepartmentId);
             u.Position = positions.Find(p => p.Id == u.PositionId);
             u.Role = roles.Find(r => r.Id == u.RoleId);
+            u.Location = locations[userLocIdx++ % locations.Length];
             await context.Users.InsertOneAsync(u);
         }
 
@@ -850,6 +862,7 @@ public static class DatabaseSeeder
             CoverLetter = "Merhaba, Kıdemli .NET Geliştirici pozisyonu için başvuruyorum. C# ve .NET Core konularında 5 yıllık deneyimim bulunmaktadır.",
             AppliedDate = DateTime.UtcNow.AddDays(-2),
             Status = "New",
+            AiMatchScore = 88,
             Applications = new List<CandidateApplication>
             {
                 new CandidateApplication
@@ -879,6 +892,7 @@ public static class DatabaseSeeder
             CoverLetter = "Yazılım ekibinize katkıda bulunmaktan mutluluk duyarım. React, Next.js ve Node.js teknolojilerinde uzmanım.",
             AppliedDate = DateTime.UtcNow.AddDays(-1),
             Status = "Shortlisted",
+            AiMatchScore = 94,
             Applications = new List<CandidateApplication>
             {
                 new CandidateApplication
@@ -933,5 +947,346 @@ public static class DatabaseSeeder
             });
         }
         await context.WorkSchedules.InsertManyAsync(schedules);
+
+        // 14. Seed LMS Courses
+        var courses = new List<Course>
+        {
+            new Course
+            {
+                Id = "course_isg",
+                Title = "İş Sağlığı ve Güvenliği (İSG) Eğitimi",
+                Description = "Yasal olarak zorunlu genel iş sağlığı ve güvenliği eğitimi.",
+                Type = "Online",
+                DurationHours = 4,
+                Provider = "SeedHR Akademi",
+                DocumentUrl = "https://example.com/isg-kurs-dokumani.pdf",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Course
+            {
+                Id = "course_cyber",
+                Title = "Siber Güvenlik Farkındalık Eğitimi",
+                Description = "Şirket içi bilgi güvenliği kuralları ve sosyal mühendislik saldırıları farkındalık eğitimi.",
+                Type = "Online",
+                DurationHours = 2,
+                Provider = "IT Güvenlik Ekibi",
+                DocumentUrl = "https://example.com/cyber-security-awareness.pdf",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Course
+            {
+                Id = "course_kvkk",
+                Title = "KVKK ve Kişisel Verilerin Korunması Eğitimi",
+                Description = "Kişisel Verilerin Korunması Kanunu kapsamında uyulması gereken veri işleme kuralları.",
+                Type = "Online",
+                DurationHours = 3,
+                Provider = "Hukuk Departmanı",
+                DocumentUrl = "https://example.com/kvkk-egitim.pdf",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }
+        };
+        await context.Courses.InsertManyAsync(courses);
+
+        // 15. Seed Course Assignments
+        var courseAssignments = new List<CourseAssignment>
+        {
+            new CourseAssignment
+            {
+                Id = "assign_1",
+                CourseId = "course_isg",
+                UserId = "user_employee",
+                AssignedBy = "user_hr",
+                AssignedDate = DateTime.UtcNow.AddDays(-10),
+                CompletedDate = DateTime.UtcNow.AddDays(-8),
+                Status = "Completed",
+                CertificateUrl = "https://example.com/certificates/cert_isg_ahmet.pdf",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new CourseAssignment
+            {
+                Id = "assign_2",
+                CourseId = "course_cyber",
+                UserId = "user_employee",
+                AssignedBy = "user_hr",
+                AssignedDate = DateTime.UtcNow.AddDays(-5),
+                CompletedDate = null,
+                Status = "Assigned",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new CourseAssignment
+            {
+                Id = "assign_3",
+                CourseId = "course_isg",
+                UserId = "user_mehmet",
+                AssignedBy = "user_hr",
+                AssignedDate = DateTime.UtcNow.AddDays(-10),
+                CompletedDate = DateTime.UtcNow.AddDays(-8),
+                Status = "Completed",
+                CertificateUrl = "https://example.com/certificates/cert_isg_mehmet.pdf",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }
+        };
+        await context.CourseAssignments.InsertManyAsync(courseAssignments);
+
+        // 16. Seed Competency Forms
+        var competencyForms = new List<CompetencyForm>
+        {
+            new CompetencyForm
+            {
+                Id = "comp_form_it",
+                DepartmentId = "dept_it",
+                Title = "Yazılım Geliştirici Değerlendirme Şablonu",
+                Description = "Yazılım geliştirici kadrosundaki çalışanlar için yetkinlik değerlendirme şablonu.",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Competencies = new List<CompetencyItem>
+                {
+                    new CompetencyItem { Id = "comp_it_1", Category = "Technical", Question = "Teknik Bilgi & Kod Kalitesi: Temiz kod prensipleri ve mimari standartlara uyum.", Weight = 40.0 },
+                    new CompetencyItem { Id = "comp_it_2", Category = "Soft Skills", Question = "Problem Çözme Yeteneği: Karmaşık hataları çözme ve analitik yaklaşım.", Weight = 30.0 },
+                    new CompetencyItem { Id = "comp_it_3", Category = "Soft Skills", Question = "İletişim & Takım Çalışması: Ekip arkadaşlarıyla uyum ve bilgi paylaşımı.", Weight = 30.0 }
+                }
+            }
+        };
+        await context.CompetencyForms.InsertManyAsync(competencyForms);
+
+        // 17. Seed Evaluations 360
+        var evaluations360 = new List<Evaluation360>
+        {
+            new Evaluation360
+            {
+                Id = "eval360_1",
+                EmployeeId = "user_employee",
+                EvaluatorId = "user_manager",
+                EvaluatorType = "Manager",
+                CompetencyFormId = "comp_form_it",
+                Scores = new Dictionary<string, int>
+                {
+                    { "comp_it_1", 5 },
+                    { "comp_it_2", 4 },
+                    { "comp_it_3", 4 }
+                },
+                Feedback = "Ahmet teknik olarak çok güçlü bir çalışan. İletişimini daha da geliştirebilir.",
+                Status = "Submitted",
+                Period = "2026 Q2",
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                IsActive = true
+            },
+            new Evaluation360
+            {
+                Id = "eval360_2",
+                EmployeeId = "user_employee",
+                EvaluatorId = "user_mehmet",
+                EvaluatorType = "Peer",
+                CompetencyFormId = "comp_form_it",
+                Scores = new Dictionary<string, int>
+                {
+                    { "comp_it_1", 4 },
+                    { "comp_it_2", 5 },
+                    { "comp_it_3", 4 }
+                },
+                Feedback = "Harika bir takım arkadaşı, her zaman yardıma hazır.",
+                Status = "Submitted",
+                Period = "2026 Q2",
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                IsActive = true
+            },
+            new Evaluation360
+            {
+                Id = "eval360_3",
+                EmployeeId = "user_employee",
+                EvaluatorId = "user_employee",
+                EvaluatorType = "Self",
+                CompetencyFormId = "comp_form_it",
+                Scores = new Dictionary<string, int>
+                {
+                    { "comp_it_1", 4 },
+                    { "comp_it_2", 4 },
+                    { "comp_it_3", 4 }
+                },
+                Feedback = "Bu dönem hedeflerimi başarıyla gerçekleştirdiğimi düşünüyorum. Teknik olarak kendimi geliştirdim.",
+                Status = "Submitted",
+                Period = "2026 Q2",
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                IsActive = true
+            }
+        };
+        await context.Evaluations360.InsertManyAsync(evaluations360);
+
+        // 18. Seed Reference Checks
+        var referenceChecks = new List<ReferenceCheck>
+        {
+            new ReferenceCheck
+            {
+                Id = "ref_check_1",
+                CandidateId = "candidate_2",
+                ReferenceName = "Hakan Aydın",
+                Company = "Tekno Soft",
+                Title = "Yazılım Mimarı",
+                Email = "hakan.aydin@teknosoft.com",
+                Phone = "+90 532 777 6655",
+                Relationship = "Former Manager",
+                Status = "Completed",
+                VerificationNotes = "Merve Hanım ile 2 yıl boyunca aynı projelerde çalıştık.",
+                Scores = new Dictionary<string, int>
+                {
+                    { "Teknik Beceri", 5 },
+                    { "Uyum / Takım Çalışması", 5 },
+                    { "Girişkenlik / Sorumluluk", 5 }
+                },
+                Comments = "Merve mükemmel bir takım arkadaşı ve teknik bilgisi çok üst düzeydedir. Kesinlikle öneririm.",
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                IsActive = true
+            }
+        };
+        await context.ReferenceChecks.InsertManyAsync(referenceChecks);
+
+        // 19. Seed Payrolls
+        var payrolls = new List<Payroll>
+        {
+            new Payroll
+            {
+                Id = "payroll_1",
+                UserId = "user_employee",
+                Period = "2026-05",
+                BaseSalary = 45000,
+                OvertimeHours = 8,
+                OvertimeRate = 300,
+                Bonus = 2000,
+                Deductions = 500,
+                GrossSalary = 49400,
+                TaxAmount = 7410,
+                NetSalary = 41490,
+                Status = "Paid",
+                PaymentDate = DateTime.UtcNow.AddDays(-5),
+                Notes = "Mayıs 2026 maaş ödemesi",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                IsActive = true
+            },
+            new Payroll
+            {
+                Id = "payroll_2",
+                UserId = "user_hr",
+                Period = "2026-05",
+                BaseSalary = 60000,
+                OvertimeHours = 0,
+                OvertimeRate = 400,
+                Bonus = 5000,
+                Deductions = 0,
+                GrossSalary = 65000,
+                TaxAmount = 9750,
+                NetSalary = 55250,
+                Status = "Paid",
+                PaymentDate = DateTime.UtcNow.AddDays(-5),
+                Notes = "Mayıs 2026 maaş ödemesi + prim",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                IsActive = true
+            }
+        };
+        await context.Payrolls.InsertManyAsync(payrolls);
+
+        // 20. Seed Expense Requests
+        var expenses = new List<ExpenseRequest>
+        {
+            new ExpenseRequest
+            {
+                Id = "expense_1",
+                UserId = "user_employee",
+                Amount = 1250,
+                Currency = "TRY",
+                Category = "Meals",
+                Description = "Müşteri akşam yemeği ağırlaması",
+                Status = "Approved",
+                ApprovedBy = "user_manager",
+                ApprovedDate = DateTime.UtcNow.AddDays(-2),
+                CreatedAt = DateTime.UtcNow.AddDays(-3),
+                IsActive = true
+            },
+            new ExpenseRequest
+            {
+                Id = "expense_2",
+                UserId = "user_employee",
+                Amount = 3500,
+                Currency = "TRY",
+                Category = "Travel",
+                Description = "Ankara şube ziyareti uçak bileti",
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                IsActive = true
+            }
+        };
+        await context.ExpenseRequests.InsertManyAsync(expenses);
+
+        // 21. Seed Employee Shifts (Vardiya planı)
+        var shifts = new List<EmployeeShift>();
+        var startOfWeek = today.AddDays(-(int)today.DayOfWeek + 1); // Monday
+        var shiftTypes = new[] { "Morning", "Evening", "Night", "Off" };
+        var employees = new[] { "user_employee", "user_mehmet", "user_hatice", "user_merve" };
+
+        int shiftIdCounter = 1;
+        for (int i = 0; i < employees.Length; i++)
+        {
+            for (int day = 0; day < 7; day++)
+            {
+                var date = startOfWeek.AddDays(day);
+                var shiftType = shiftTypes[(i + day) % 4];
+                string startTime = "08:00";
+                string endTime = "16:00";
+                if (shiftType == "Evening") { startTime = "16:00"; endTime = "00:00"; }
+                else if (shiftType == "Night") { startTime = "00:00"; endTime = "08:00"; }
+                else if (shiftType == "Off") { startTime = "00:00"; endTime = "00:00"; }
+
+                shifts.Add(new EmployeeShift
+                {
+                    Id = $"shift_{shiftIdCounter++}",
+                    UserId = employees[i],
+                    Date = date,
+                    ShiftType = shiftType,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    Notes = day == 6 && shiftType != "Off" ? "Hafta sonu nöbeti" : null,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                });
+            }
+        }
+        await context.EmployeeShifts.InsertManyAsync(shifts);
+
+        // 22. Seed Visitor Logs
+        var visitors = new List<VisitorLog>
+        {
+            new VisitorLog
+            {
+                Id = "visitor_1",
+                VisitorName = "Murat Can",
+                Company = "Google",
+                Purpose = "Partnerlik ve Entegrasyon Görüşmesi",
+                HostUserId = "user_manager",
+                HostUserName = "Can Demir",
+                EntryTime = DateTime.UtcNow.AddHours(-2),
+                Status = "CheckedIn",
+                BadgeNumber = "B-201",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new VisitorLog
+            {
+                Id = "visitor_2",
+                VisitorName = "Elif Yıldırım",
+                Company = "Karya Danışmanlık",
+                Purpose = "İK Süreçleri Danışmanlığı",
+                HostUserId = "user_hr",
+                HostUserName = "Ayşe Kaya",
+                Status = "Expected",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }
+        };
+        await context.VisitorLogs.InsertManyAsync(visitors);
     }
 }

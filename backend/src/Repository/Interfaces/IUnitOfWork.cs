@@ -19,6 +19,21 @@ public interface IUnitOfWork : IDisposable
     IInterviewRepository Interviews { get; }
     IDocumentRepository Documents { get; }
     IWorkScheduleRepository WorkSchedules { get; }
+    IAssetRepository Assets { get; }
+    IAssetAllocationRepository AssetAllocations { get; }
+    IOnboardingPlanRepository OnboardingPlans { get; }
+    IOnboardingTaskRepository OnboardingTasks { get; }
+    IOnboardingInstanceRepository OnboardingInstances { get; }
+    IOnboardingTaskCompletionRepository OnboardingTaskCompletions { get; }
+    ICourseRepository Courses { get; }
+    ICourseAssignmentRepository CourseAssignments { get; }
+    ICompetencyFormRepository CompetencyForms { get; }
+    IEvaluation360Repository Evaluations360 { get; }
+    IReferenceCheckRepository ReferenceChecks { get; }
+    IPayrollRepository Payrolls { get; }
+    IExpenseRequestRepository ExpenseRequests { get; }
+    IEmployeeShiftRepository EmployeeShifts { get; }
+    IVisitorLogRepository VisitorLogs { get; }
 
     Task<bool> SaveChangesAsync();
     Task BeginTransactionAsync();

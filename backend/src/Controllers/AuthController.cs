@@ -14,14 +14,23 @@ public class AuthController : ControllerBase
     private readonly IAuthenticationService _authService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _turnstileSecretKey;
+    private readonly bool _bypassTurnstile;
 
-    public AuthController(IAuthenticationService authService, IHttpClientFactory httpClientFactory, Microsoft.Extensions.Configuration.IConfiguration configuration)
+    public AuthController(
+        IAuthenticationService authService, 
+        IHttpClientFactory httpClientFactory, 
+        Microsoft.Extensions.Configuration.IConfiguration configuration,
+        Microsoft.AspNetCore.Hosting.IWebHostEnvironment env)
     {
         _authService = authService;
         _httpClientFactory = httpClientFactory;
         _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") 
                               ?? configuration["Turnstile:SecretKey"] 
                               ?? "0x4AAAAAADe7IxiQPHhZQ2ewHtNCl_9xpGQ";
+        
+        _bypassTurnstile = env.EnvironmentName == "Development" 
+                           || configuration.GetValue<bool>("Turnstile:BypassForLocalDevelopment")
+                           || Environment.GetEnvironmentVariable("BYPASS_TURNSTILE") == "true";
     }
 
     [HttpPost("login")]
@@ -32,15 +41,18 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("Invalid input"));
 
         // Verify Turnstile Captcha
-        if (string.IsNullOrEmpty(request.TurnstileToken))
+        if (!_bypassTurnstile)
         {
-            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
-        }
+            if (string.IsNullOrEmpty(request.TurnstileToken))
+            {
+                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+            }
 
-        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
-        if (!turnstileSuccess)
-        {
-            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(request.TurnstileToken);
+            if (!turnstileSuccess)
+            {
+                return BadRequest(ApiResponse<LoginResponse>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            }
         }
 
         var result = await _authService.LoginAsync(request);

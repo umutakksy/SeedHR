@@ -8,7 +8,9 @@
       "Bash(git commit -m 'temp: allow any origin CORS for debugging 403 issue *)",
       "Bash(git commit -m 'fix: synchronize JWT_SECRET between docker-compose and .env *)",
       "Bash(git commit -m 'fix: include .env and appsettings files in Docker image *)",
-      "Bash(git commit -m 'docs: add comprehensive technical documentation *)"
+      "Bash(git commit -m 'docs: add comprehensive technical documentation *)",
+      "Bash(Get-ChildItem -Path \".\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

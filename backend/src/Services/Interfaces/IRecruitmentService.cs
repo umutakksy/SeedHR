@@ -23,4 +23,10 @@ public interface IRecruitmentService
     Task<IEnumerable<InterviewDto>> GetInterviewsAsync();
     Task<InterviewDto> CompleteInterviewAsync(string id, CompleteInterviewRequest request);
     Task<CandidateDto> UpdateCandidateStatusAsync(string id, string status);
+
+    // Reference checking
+    Task<ReferenceCheckDto> CreateReferenceCheckAsync(string candidateId, CreateReferenceCheckRequest request);
+    Task<ReferenceCheckDto> SubmitReferenceFeedbackAsync(string referenceId, SubmitReferenceFeedbackRequest request);
+    Task<IEnumerable<ReferenceCheckDto>> GetReferencesForCandidateAsync(string candidateId);
+    Task<ReferenceCheckDto> GetReferenceByIdAsync(string id);
 }

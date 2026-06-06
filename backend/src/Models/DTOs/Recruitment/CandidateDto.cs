@@ -14,6 +14,7 @@ public class CandidateDto
     public string? CoverLetter { get; set; }
     public DateTime AppliedDate { get; set; }
     public string Status { get; set; } = null!;
+    public int? AiMatchScore { get; set; }
     public string FullName => $"{FirstName} {LastName}";
 }
 

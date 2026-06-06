@@ -31,5 +31,11 @@ public class RecruitmentMappingProfile : Profile
 
         CreateMap<CompleteInterviewRequest, Interview>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => "Completed"));
+
+        CreateMap<ReferenceCheck, ReferenceCheckDto>()
+            .ForMember(dest => dest.CandidateName, opt => opt.MapFrom(src => src.Candidate != null ? src.Candidate.FullName : null));
+
+        CreateMap<CreateReferenceCheckRequest, ReferenceCheck>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => "Pending"));
     }
 }

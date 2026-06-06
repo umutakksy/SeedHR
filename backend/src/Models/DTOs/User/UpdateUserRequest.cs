@@ -14,6 +14,7 @@ public class UpdateUserRequest
     public string? PositionId { get; set; }
     public string? ManagerId { get; set; }
     public DateTime? HireDate { get; set; }
+    public string? Location { get; set; }
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
 }

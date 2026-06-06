@@ -24,6 +24,21 @@ public interface IMongoDbContext
     IMongoCollection<Interview> Interviews { get; }
     IMongoCollection<Announcement> Announcements { get; }
     IMongoCollection<Notification> Notifications { get; }
+    IMongoCollection<Asset> Assets { get; }
+    IMongoCollection<AssetAllocation> AssetAllocations { get; }
+    IMongoCollection<OnboardingPlan> OnboardingPlans { get; }
+    IMongoCollection<OnboardingTask> OnboardingTasks { get; }
+    IMongoCollection<OnboardingInstance> OnboardingInstances { get; }
+    IMongoCollection<OnboardingTaskCompletion> OnboardingTaskCompletions { get; }
+    IMongoCollection<Course> Courses { get; }
+    IMongoCollection<CourseAssignment> CourseAssignments { get; }
+    IMongoCollection<CompetencyForm> CompetencyForms { get; }
+    IMongoCollection<Evaluation360> Evaluations360 { get; }
+    IMongoCollection<ReferenceCheck> ReferenceChecks { get; }
+    IMongoCollection<Payroll> Payrolls { get; }
+    IMongoCollection<ExpenseRequest> ExpenseRequests { get; }
+    IMongoCollection<EmployeeShift> EmployeeShifts { get; }
+    IMongoCollection<VisitorLog> VisitorLogs { get; }
 
     Task CreateIndexesAsync();
 }

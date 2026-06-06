@@ -23,6 +23,7 @@ public class RecruitmentController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _turnstileSecretKey;
+    private readonly bool _bypassTurnstile;
 
     public RecruitmentController(IRecruitmentService recruitmentService, IWebHostEnvironment env, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
@@ -32,6 +33,9 @@ public class RecruitmentController : ControllerBase
         _turnstileSecretKey = Environment.GetEnvironmentVariable("TURNSTILE_SECRET_KEY") 
                               ?? configuration["Turnstile:SecretKey"] 
                               ?? "0x4AAAAAADe7IxiQPHhZQ2ewHtNCl_9xpGQ";
+        _bypassTurnstile = env.EnvironmentName == "Development" 
+                           || configuration.GetValue<bool>("Turnstile:BypassForLocalDevelopment")
+                           || Environment.GetEnvironmentVariable("BYPASS_TURNSTILE") == "true";
     }
 
     [HttpPost("candidates")]
@@ -108,15 +112,18 @@ public class RecruitmentController : ControllerBase
         IFormFile cv)
     {
         // Verify Turnstile Captcha
-        if (string.IsNullOrEmpty(turnstileToken))
+        if (!_bypassTurnstile)
         {
-            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
-        }
+            if (string.IsNullOrEmpty(turnstileToken))
+            {
+                return BadRequest(ApiResponse<CandidateDto>.ErrorResponse("CAPTCHA doğrulaması zorunludur."));
+            }
 
-        var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(turnstileToken);
-        if (!turnstileSuccess)
-        {
-            return BadRequest(ApiResponse<CandidateDto>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            var (turnstileSuccess, turnstileError) = await VerifyTurnstileTokenAsync(turnstileToken);
+            if (!turnstileSuccess)
+            {
+                return BadRequest(ApiResponse<CandidateDto>.ErrorResponse($"CAPTCHA doğrulaması başarısız oldu. Hata: {turnstileError}"));
+            }
         }
 
         if (cv == null || cv.Length == 0)
@@ -267,6 +274,41 @@ public class RecruitmentController : ControllerBase
         {
             return (false, $"İstisna oluştu: {ex.Message}");
         }
+    }
+
+    [HttpPost("candidates/{candidateId}/references")]
+    public async Task<ActionResult<ApiResponse<ReferenceCheckDto>>> CreateReferenceCheck(string candidateId, [FromBody] CreateReferenceCheckRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<ReferenceCheckDto>.ErrorResponse("Invalid input"));
+
+        var reference = await _recruitmentService.CreateReferenceCheckAsync(candidateId, request);
+        return Created("", ApiResponse<ReferenceCheckDto>.SuccessResponse(reference, "Candidate reference check request created successfully"));
+    }
+
+    [HttpPost("references/{referenceId}/feedback")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<ReferenceCheckDto>>> SubmitReferenceFeedback(string referenceId, [FromBody] SubmitReferenceFeedbackRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<ReferenceCheckDto>.ErrorResponse("Invalid input"));
+
+        var updated = await _recruitmentService.SubmitReferenceFeedbackAsync(referenceId, request);
+        return Ok(ApiResponse<ReferenceCheckDto>.SuccessResponse(updated, "Reference feedback submitted successfully"));
+    }
+
+    [HttpGet("candidates/{candidateId}/references")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<ReferenceCheckDto>>>> GetReferencesForCandidate(string candidateId)
+    {
+        var references = await _recruitmentService.GetReferencesForCandidateAsync(candidateId);
+        return Ok(ApiResponse<IEnumerable<ReferenceCheckDto>>.SuccessResponse(references, "Candidate references retrieved successfully"));
+    }
+
+    [HttpGet("references/{id}")]
+    public async Task<ActionResult<ApiResponse<ReferenceCheckDto>>> GetReferenceById(string id)
+    {
+        var reference = await _recruitmentService.GetReferenceByIdAsync(id);
+        return Ok(ApiResponse<ReferenceCheckDto>.SuccessResponse(reference, "Reference check retrieved successfully"));
     }
 }
 

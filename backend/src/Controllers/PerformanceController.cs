@@ -162,4 +162,79 @@ public class PerformanceController : ControllerBase
         var evaluations = await _performanceService.GetPeriodEvaluationsAsync(period);
         return Ok(ApiResponse<IEnumerable<PerformanceEvaluationDto>>.SuccessResponse(evaluations, "Period evaluations retrieved successfully"));
     }
+
+    [HttpPost("competency-forms")]
+    [Authorize(Roles = "Admin,HR")]
+    public async Task<ActionResult<ApiResponse<CompetencyFormDto>>> CreateCompetencyForm([FromBody] CreateCompetencyFormRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<CompetencyFormDto>.ErrorResponse("Invalid input"));
+
+        var form = await _performanceService.CreateCompetencyFormAsync(request);
+        return Created("", ApiResponse<CompetencyFormDto>.SuccessResponse(form, "Competency form created successfully"));
+    }
+
+    [HttpGet("competency-forms/{id}")]
+    public async Task<ActionResult<ApiResponse<CompetencyFormDto>>> GetCompetencyForm(string id)
+    {
+        var form = await _performanceService.GetCompetencyFormByIdAsync(id);
+        return Ok(ApiResponse<CompetencyFormDto>.SuccessResponse(form, "Competency form retrieved successfully"));
+    }
+
+    [HttpGet("competency-forms")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<CompetencyFormDto>>>> GetCompetencyForms([FromQuery] string? departmentId)
+    {
+        IEnumerable<CompetencyFormDto> forms;
+        if (!string.IsNullOrEmpty(departmentId))
+        {
+            forms = await _performanceService.GetCompetencyFormsByDepartmentAsync(departmentId);
+        }
+        else
+        {
+            forms = await _performanceService.GetAllCompetencyFormsAsync();
+        }
+        return Ok(ApiResponse<IEnumerable<CompetencyFormDto>>.SuccessResponse(forms, "Competency forms retrieved successfully"));
+    }
+
+    [HttpPost("360-requests")]
+    [Authorize(Roles = "Admin,Manager,HR")]
+    public async Task<ActionResult<ApiResponse<Evaluation360Dto>>> Create360Request([FromBody] Create360Request request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<Evaluation360Dto>.ErrorResponse("Invalid input"));
+
+        var evaluation = await _performanceService.Create360RequestAsync(request);
+        return Created("", ApiResponse<Evaluation360Dto>.SuccessResponse(evaluation, "360 degree feedback request created successfully"));
+    }
+
+    [HttpPost("360-evaluations/{id}/submit")]
+    public async Task<ActionResult<ApiResponse<Evaluation360Dto>>> Submit360Scores(string id, [FromBody] Submit360ScoresRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<Evaluation360Dto>.ErrorResponse("Invalid input"));
+
+        var updated = await _performanceService.Submit360ScoresAsync(id, request);
+        return Ok(ApiResponse<Evaluation360Dto>.SuccessResponse(updated, "360 degree feedback scores submitted successfully"));
+    }
+
+    [HttpGet("360-evaluations/employee/{employeeId}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<Evaluation360Dto>>>> Get360EvaluationsForEmployee(string employeeId, [FromQuery] string period)
+    {
+        var evaluations = await _performanceService.Get360EvaluationsForEmployeeAsync(employeeId, period);
+        return Ok(ApiResponse<IEnumerable<Evaluation360Dto>>.SuccessResponse(evaluations, "Employee 360 evaluations retrieved successfully"));
+    }
+
+    [HttpGet("360-evaluations/evaluator/{evaluatorId}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<Evaluation360Dto>>>> Get360EvaluationsByEvaluator(string evaluatorId)
+    {
+        var evaluations = await _performanceService.Get360EvaluationsByEvaluatorAsync(evaluatorId);
+        return Ok(ApiResponse<IEnumerable<Evaluation360Dto>>.SuccessResponse(evaluations, "Evaluations assigned to you retrieved successfully"));
+    }
+
+    [HttpGet("360-evaluations/{id}")]
+    public async Task<ActionResult<ApiResponse<Evaluation360Dto>>> Get360EvaluationById(string id)
+    {
+        var evaluation = await _performanceService.Get360EvaluationByIdAsync(id);
+        return Ok(ApiResponse<Evaluation360Dto>.SuccessResponse(evaluation, "360 evaluation retrieved successfully"));
+    }
 }

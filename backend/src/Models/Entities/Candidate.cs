@@ -16,6 +16,7 @@ public class Candidate : BaseEntity
     public string? CoverLetter { get; set; }
     public DateTime AppliedDate { get; set; }
     public string Status { get; set; } = "New"; // New, Reviewing, Shortlisted, Rejected, Hired
+    public int? AiMatchScore { get; set; }
     public List<CandidateApplication> Applications { get; set; } = new();
     public List<Interview> Interviews { get; set; } = new();
 

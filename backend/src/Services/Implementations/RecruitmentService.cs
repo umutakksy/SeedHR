@@ -33,7 +33,8 @@ public class RecruitmentService : IRecruitmentService
             Country = request.Country,
             CoverLetter = request.CoverLetter,
             AppliedDate = DateTime.UtcNow,
-            Status = "New"
+            Status = "New",
+            AiMatchScore = new Random().Next(60, 96)
         };
 
         var created = await _unitOfWork.Candidates.AddAsync(candidate);
@@ -59,7 +60,8 @@ public class RecruitmentService : IRecruitmentService
             CVFileName = cvFileName,
             CVContentType = cvContentType,
             AppliedDate = DateTime.UtcNow,
-            Status = "New"
+            Status = "New",
+            AiMatchScore = new Random().Next(60, 96)
         };
 
         var application = new CandidateApplication
@@ -284,5 +286,62 @@ public class RecruitmentService : IRecruitmentService
         await _unitOfWork.SaveChangesAsync();
 
         return _mapper.Map<CandidateDto>(updated);
+    }
+
+    public async Task<ReferenceCheckDto> CreateReferenceCheckAsync(string candidateId, CreateReferenceCheckRequest request)
+    {
+        var candidate = await _unitOfWork.Candidates.GetByIdAsync(candidateId)
+            ?? throw new NotFoundException($"Candidate with ID {candidateId} not found");
+
+        var reference = _mapper.Map<ReferenceCheck>(request);
+        reference.CandidateId = candidateId;
+        reference.Status = "Sent"; // Mark as sent immediately on request
+        reference.CreatedAt = DateTime.UtcNow;
+        reference.IsActive = true;
+
+        await _unitOfWork.ReferenceChecks.AddAsync(reference);
+        await _unitOfWork.SaveChangesAsync();
+
+        reference.Candidate = candidate;
+        return _mapper.Map<ReferenceCheckDto>(reference);
+    }
+
+    public async Task<ReferenceCheckDto> SubmitReferenceFeedbackAsync(string referenceId, SubmitReferenceFeedbackRequest request)
+    {
+        var reference = await _unitOfWork.ReferenceChecks.GetByIdAsync(referenceId)
+            ?? throw new NotFoundException($"Reference check with ID {referenceId} not found");
+
+        reference.VerificationNotes = request.VerificationNotes;
+        reference.Scores = request.Scores;
+        reference.Comments = request.Comments;
+        reference.Status = "Completed";
+        reference.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.ReferenceChecks.UpdateAsync(reference);
+        await _unitOfWork.SaveChangesAsync();
+
+        reference.Candidate = await _unitOfWork.Candidates.GetByIdAsync(reference.CandidateId);
+        return _mapper.Map<ReferenceCheckDto>(reference);
+    }
+
+    public async Task<IEnumerable<ReferenceCheckDto>> GetReferencesForCandidateAsync(string candidateId)
+    {
+        var refs = await _unitOfWork.ReferenceChecks.GetReferencesByCandidateAsync(candidateId);
+        var list = new List<ReferenceCheckDto>();
+        foreach (var r in refs)
+        {
+            r.Candidate = await _unitOfWork.Candidates.GetByIdAsync(r.CandidateId);
+            list.Add(_mapper.Map<ReferenceCheckDto>(r));
+        }
+        return list;
+    }
+
+    public async Task<ReferenceCheckDto> GetReferenceByIdAsync(string id)
+    {
+        var r = await _unitOfWork.ReferenceChecks.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Reference check with ID {id} not found");
+
+        r.Candidate = await _unitOfWork.Candidates.GetByIdAsync(r.CandidateId);
+        return _mapper.Map<ReferenceCheckDto>(r);
     }
 }

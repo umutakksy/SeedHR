@@ -39,6 +39,21 @@ public class MongoDbContext : IMongoDbContext
     public IMongoCollection<Interview> Interviews => _database.GetCollection<Interview>("interviews");
     public IMongoCollection<Announcement> Announcements => _database.GetCollection<Announcement>("announcements");
     public IMongoCollection<Notification> Notifications => _database.GetCollection<Notification>("notifications");
+    public IMongoCollection<Asset> Assets => _database.GetCollection<Asset>("assets");
+    public IMongoCollection<AssetAllocation> AssetAllocations => _database.GetCollection<AssetAllocation>("assetAllocations");
+    public IMongoCollection<OnboardingPlan> OnboardingPlans => _database.GetCollection<OnboardingPlan>("onboardingPlans");
+    public IMongoCollection<OnboardingTask> OnboardingTasks => _database.GetCollection<OnboardingTask>("onboardingTasks");
+    public IMongoCollection<OnboardingInstance> OnboardingInstances => _database.GetCollection<OnboardingInstance>("onboardingInstances");
+    public IMongoCollection<OnboardingTaskCompletion> OnboardingTaskCompletions => _database.GetCollection<OnboardingTaskCompletion>("onboardingTaskCompletions");
+    public IMongoCollection<Course> Courses => _database.GetCollection<Course>("courses");
+    public IMongoCollection<CourseAssignment> CourseAssignments => _database.GetCollection<CourseAssignment>("courseAssignments");
+    public IMongoCollection<CompetencyForm> CompetencyForms => _database.GetCollection<CompetencyForm>("competencyForms");
+    public IMongoCollection<Evaluation360> Evaluations360 => _database.GetCollection<Evaluation360>("evaluations360");
+    public IMongoCollection<ReferenceCheck> ReferenceChecks => _database.GetCollection<ReferenceCheck>("referenceChecks");
+    public IMongoCollection<Payroll> Payrolls => _database.GetCollection<Payroll>("payrolls");
+    public IMongoCollection<ExpenseRequest> ExpenseRequests => _database.GetCollection<ExpenseRequest>("expenseRequests");
+    public IMongoCollection<EmployeeShift> EmployeeShifts => _database.GetCollection<EmployeeShift>("employeeShifts");
+    public IMongoCollection<VisitorLog> VisitorLogs => _database.GetCollection<VisitorLog>("visitorLogs");
 
     public async Task CreateIndexesAsync()
     {
@@ -119,6 +134,38 @@ public class MongoDbContext : IMongoDbContext
         // WorkSchedule indexes
         await WorkSchedules.Indexes.CreateOneAsync(
             new CreateIndexModel<WorkSchedule>(Builders<WorkSchedule>.IndexKeys.Ascending(ws => ws.Date))
+        );
+
+        // Payroll indexes
+        await Payrolls.Indexes.CreateOneAsync(
+            new CreateIndexModel<Payroll>(Builders<Payroll>.IndexKeys.Ascending(p => p.UserId))
+        );
+        await Payrolls.Indexes.CreateOneAsync(
+            new CreateIndexModel<Payroll>(Builders<Payroll>.IndexKeys.Ascending(p => p.Period))
+        );
+
+        // ExpenseRequest indexes
+        await ExpenseRequests.Indexes.CreateOneAsync(
+            new CreateIndexModel<ExpenseRequest>(Builders<ExpenseRequest>.IndexKeys.Ascending(er => er.UserId))
+        );
+        await ExpenseRequests.Indexes.CreateOneAsync(
+            new CreateIndexModel<ExpenseRequest>(Builders<ExpenseRequest>.IndexKeys.Ascending(er => er.Status))
+        );
+
+        // EmployeeShift indexes
+        await EmployeeShifts.Indexes.CreateOneAsync(
+            new CreateIndexModel<EmployeeShift>(Builders<EmployeeShift>.IndexKeys.Ascending(es => es.UserId))
+        );
+        await EmployeeShifts.Indexes.CreateOneAsync(
+            new CreateIndexModel<EmployeeShift>(Builders<EmployeeShift>.IndexKeys.Ascending(es => es.Date))
+        );
+
+        // VisitorLog indexes
+        await VisitorLogs.Indexes.CreateOneAsync(
+            new CreateIndexModel<VisitorLog>(Builders<VisitorLog>.IndexKeys.Ascending(vl => vl.HostUserId))
+        );
+        await VisitorLogs.Indexes.CreateOneAsync(
+            new CreateIndexModel<VisitorLog>(Builders<VisitorLog>.IndexKeys.Ascending(vl => vl.Status))
         );
     }
 }
