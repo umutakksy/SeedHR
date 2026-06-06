@@ -1,0 +1,26 @@
+# Dependencies - Docker will install these fresh
+node_modules
+
+# Next.js build output
+.next
+out
+
+# Git
+.git
+.gitignore
+
+# Misc
+*.md
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+npm-debug.log*
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Test / lint
+coverage
+.eslintcache
