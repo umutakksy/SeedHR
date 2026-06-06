@@ -7,8 +7,8 @@ import { authAPI } from "@/lib/api";
 import { Key, Mail } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
-// Site key doğrudan sabit olarak tanımlandı — herhangi bir env değişkeni kullanılmıyor
-const SITE_KEY = "0x4AAAAAAADe7I-LrRFWQeph8";
+// Cloudflare Turnstile site key — .env.local'daki NEXT_PUBLIC_TURNSTILE_SITE_KEY kullanılır
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "0x4AAAAAAADe7I-LrRPWQeph8";
 
 declare global {
   interface Window {
