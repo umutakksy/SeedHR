@@ -8,7 +8,7 @@ import { Key, Mail } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 import { Turnstile, TurnstileInstance } from "@marsidev/react-turnstile";
 
-const TURNSTILE_SITE_KEY = "0x4AAAAAAADe7I-LrRFWQeph8";
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
 export default function LoginPage() {
   const router = useRouter();
