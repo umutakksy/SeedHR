@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -8,6 +6,8 @@ services:
       - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - seedhr-net
     restart: always
 
   backend:
@@ -20,12 +20,14 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017  # Docker içi MongoDB
+      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017
     depends_on:
       - mongodb
     volumes:
       - backend-uploads:/app/uploads
       - backend-keys:/root/.aspnet/DataProtection-Keys
+    networks:
+      - seedhr-net
     restart: always
 
   frontend:
@@ -42,6 +44,8 @@ services:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
     depends_on:
       - backend
+    networks:
+      - seedhr-net
     restart: always
 
   nginx:
@@ -54,9 +58,15 @@ services:
     depends_on:
       - backend
       - frontend
+    networks:
+      - seedhr-net
     restart: always
 
 volumes:
   mongo-data:
   backend-uploads:
   backend-keys:
+
+networks:
+  seedhr-net:
+    driver: bridge
