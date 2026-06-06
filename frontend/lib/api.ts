@@ -3094,3 +3094,38 @@ export const aiAPI = {
     );
   }
 };
+
+// ---- Import/Export API ----
+
+export interface ImportResultDto {
+  totalImported: number;
+  usersImported: number;
+  departmentsImported: number;
+  positionsImported: number;
+  errors: string[];
+}
+
+export const importAPI = {
+  uploadExcel: async (file: File): Promise<ApiResponse<ImportResultDto>> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await api.post("/import/excel", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.response?.data?.message || "Import sırasında hata oluştu",
+        data: null as any,
+        errors: err.response?.data?.errors || [],
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+  getTemplateUrl: () => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    return `${baseUrl}/import/template`;
+  },
+};

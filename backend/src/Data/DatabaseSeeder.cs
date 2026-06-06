@@ -10,6 +10,14 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(IMongoDbContext context, IPasswordHasher passwordHasher)
     {
+        // Skip seeding if database already has users
+        var hasUsers = await context.Users.Find(_ => true).AnyAsync();
+        if (hasUsers)
+        {
+            Console.WriteLine("[SEED] Database already contains users. Skipping seeding to prevent data loss.");
+            return;
+        }
+
         // Force drop/clear collections to ensure clean seed
         await context.Users.DeleteManyAsync(_ => true);
         await context.Departments.DeleteManyAsync(_ => true);
