@@ -35,9 +35,12 @@ public class UserRepository : MongoRepository<User>, IUserRepository
 
     public async Task<IEnumerable<User>> GetUpcomingBirthdaysAsync(int days = 30)
     {
-        var users = await GetAllAsync();
-        var today = DateTime.Now;
+        var today = DateTime.UtcNow;
         var futureDate = today.AddDays(days);
+        var months = new List<int> { today.Month, futureDate.Month };
+
+        // Query only users born in the current month or the next month to drastically reduce memory usage
+        var users = await FindAsync(u => months.Contains(u.DateOfBirth.Month));
 
         return users.Where(u =>
         {

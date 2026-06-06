@@ -18,14 +18,17 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardStatisticsDto> GetDashboardStatisticsAsync()
     {
-        var allUsers = await _unitOfWork.Users.GetAllAsync();
         var now = DateTime.UtcNow;
         var thisMonthStart = new DateTime(now.Year, now.Month, 1);
 
-        var evaluations = await _unitOfWork.PerformanceEvaluations.GetAllAsync();
-        var avgScore = evaluations.Any() 
-            ? Math.Round(evaluations.Average(e => (double)e.Rating), 1) 
-            : 0.0;
+        var avgScore = 0.0;
+        var ratings = _unitOfWork.PerformanceEvaluations.GetQueryable()
+            .Select(e => (double)e.Rating)
+            .ToList();
+        if (ratings.Any())
+        {
+            avgScore = Math.Round(ratings.Average(), 1);
+        }
 
         var todayStart = DateTime.UtcNow.Date;
         var todayEnd = todayStart.AddDays(1);

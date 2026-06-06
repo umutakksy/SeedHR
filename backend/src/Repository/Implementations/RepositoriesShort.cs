@@ -127,8 +127,13 @@ public class AnnouncementRepository : MongoRepository<Announcement>, IAnnounceme
 
     public async Task<IEnumerable<Announcement>> GetRecentAsync(int count = 10)
     {
-        var all = await GetPublishedAsync();
-        return all.OrderByDescending(a => a.PublishedDate).Take(count);
+        return await Task.Run(() =>
+            GetQueryable()
+                .Where(a => a.Status == "Published")
+                .OrderByDescending(a => a.PublishedDate)
+                .Take(count)
+                .ToList()
+        );
     }
 }
 
@@ -144,8 +149,12 @@ public class CandidateRepository : MongoRepository<Candidate>, ICandidateReposit
 
     public async Task<IEnumerable<Candidate>> GetRecentAsync(int count = 10)
     {
-        var all = await GetAllAsync();
-        return all.OrderByDescending(c => c.AppliedDate).Take(count);
+        return await Task.Run(() =>
+            GetQueryable()
+                .OrderByDescending(c => c.AppliedDate)
+                .Take(count)
+                .ToList()
+        );
     }
 }
 
