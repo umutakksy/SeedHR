@@ -8,7 +8,7 @@ import { Key, Mail } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
 // Cloudflare Turnstile public site key
-const SITE_KEY = "0x4AAAAAAADe7I-LrRPWQeph8";
+const SITE_KEY = "0x4AAAAAADe7I-LrRPWQeph8";
 
 declare global {
   interface Window {
