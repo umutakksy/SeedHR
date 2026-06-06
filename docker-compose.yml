@@ -17,12 +17,10 @@ services:
     container_name: seedhr-backend
     ports:
       - "127.0.0.1:5005:5000"
+    env_file:
+      - ./backend/.env
     environment:
-      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017
-      - MONGODB_DATABASE_NAME=seedhr
-      - JWT_SECRET=super_secret_seedhr_development_key_with_sufficient_bytes_32_characters_minimum
-      - JWT_EXPIRATION_HOURS=24
-      - ASPNETCORE_ENVIRONMENT=Development
+      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017  # Docker içi MongoDB
     depends_on:
       - mongodb
     volumes:
@@ -34,12 +32,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
+        - NEXT_PUBLIC_API_URL=/api
     container_name: seedhr-frontend
     ports:
       - "127.0.0.1:3005:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://backend:5000/api/
     depends_on:
       - backend
     restart: always

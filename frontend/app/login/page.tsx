@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { authAPI } from "@/lib/api";
-import { Shield, Key, Mail, RefreshCw } from "lucide-react";
+import { Key, Mail } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
+import { Turnstile, TurnstileInstance } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +16,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   useEffect(() => {
     checkAuth();
@@ -26,30 +31,36 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email || !password) {
       toast.error("Lütfen tüm alanları doldurun");
       return;
     }
+
+    if (!captchaToken) {
+      toast.error("Lütfen robot olmadığınızı doğrulayın");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await authAPI.login({ email, password });
+      const res = await authAPI.login({ email, password, turnstileToken: captchaToken });
       if (res.success) {
         login(res.data.user, res.data.token);
         toast.success(`Hoş geldiniz, ${res.data.user.fullName}`);
         router.push("/");
       } else {
         toast.error(res.message || "Giriş başarısız");
+        turnstileRef.current?.reset();
+        setCaptchaToken(null);
       }
     } catch (err) {
       toast.error("Giriş sırasında hata oluştu. E-posta veya şifre hatalı.");
+      turnstileRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickSelect = (quickEmail: string) => {
-    setEmail(quickEmail);
-    setPassword("Password123!");
   };
 
   return (
@@ -99,7 +110,7 @@ export default function LoginPage() {
                   type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin"
+                  placeholder="ornek@seedhr.com.tr"
                   className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs bg-slate-50/50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-950 dark:text-white"
                   required
                 />
@@ -114,17 +125,38 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="admin"
+                  placeholder="••••••••"
                   className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs bg-slate-50/50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-950 dark:text-white"
                   required
                 />
               </div>
             </div>
 
+            {/* Cloudflare Turnstile */}
+            <div className="flex justify-center py-1">
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onExpire={() => {
+                  setCaptchaToken(null);
+                  turnstileRef.current?.reset();
+                }}
+                onError={() => {
+                  setCaptchaToken(null);
+                  toast.error("CAPTCHA yüklenemedi. Sayfayı yenileyin.");
+                }}
+                options={{
+                  theme: "auto",
+                  language: "tr",
+                }}
+              />
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-2.5 text-xs font-semibold text-white transition-all duration-200 disabled:opacity-50 shadow-md shadow-indigo-600/10"
+              disabled={loading || !captchaToken}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-2.5 text-xs font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/10"
             >
               {loading ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></span>

@@ -1,0 +1,16 @@
+# SeedHR Root Gitignore
+
+# Doc folder (user requested)
+doc/
+
+# Root env files
+.env
+.env.local
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.docstate
