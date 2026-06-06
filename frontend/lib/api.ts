@@ -1303,8 +1303,15 @@ export const authAPI = {
 
   getCurrentUser: (): UserDto | null => {
     if (typeof window === "undefined") return null;
-    const userStr = localStorage.getItem("currentUser");
-    return userStr ? JSON.parse(userStr) : null;
+    try {
+      const userStr = localStorage.getItem("currentUser");
+      if (userStr && userStr !== "undefined") {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error("Error in getCurrentUser:", e);
+    }
+    return null;
   },
 
   logout: async (): Promise<ApiResponse<boolean>> => {

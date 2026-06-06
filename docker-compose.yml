@@ -36,14 +36,12 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
-        - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY:-0x4AAAAAAADe7I-LrRPWQeph8}
     container_name: seedhr-frontend
     ports:
       - "127.0.0.1:3005:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
-      - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY:-0x4AAAAAAADe7I-LrRPWQeph8}
     depends_on:
       - backend
     networks:
