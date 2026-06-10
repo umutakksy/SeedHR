@@ -1,6 +1,7 @@
 namespace SeedHR.Backend.Services.Implementations;
 
 using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using SeedHR.Backend.Exceptions;
 using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Models.Entities;
@@ -12,12 +13,14 @@ public class LeaveService : ILeaveService
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
+    private readonly IMemoryCache _cache;
 
-    public LeaveService(IUnitOfWork unitOfWork, INotificationService notificationService, IMapper mapper)
+    public LeaveService(IUnitOfWork unitOfWork, INotificationService notificationService, IMapper mapper, IMemoryCache cache)
     {
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<LeaveRequestDto> CreateLeaveRequestAsync(string userId, CreateLeaveRequestRequest request)
@@ -56,6 +59,18 @@ public class LeaveService : ILeaveService
         var created = await _unitOfWork.LeaveRequests.AddAsync(leaveRequest);
         await _unitOfWork.SaveChangesAsync();
         await PopulateNavigationPropertiesAsync(created);
+
+        // Find user's manager or users in HR role
+        var managers = await _unitOfWork.Users.FindAsync(u => u.RoleId == "role_hr" || (!string.IsNullOrEmpty(user.ManagerId) && u.Id == user.ManagerId));
+        foreach (var manager in managers)
+        {
+            await _notificationService.CreateNotificationAsync(
+                manager.Id,
+                "Yeni İzin Talebi",
+                $"{user.FullName} izin talebinde bulundu ({request.DaysRequested} gün, {request.StartDate:dd.MM.yyyy}–{request.EndDate:dd.MM.yyyy})",
+                "LeaveRequest", created.Id, "LeaveRequest"
+            );
+        }
 
         return _mapper.Map<LeaveRequestDto>(created);
     }
@@ -190,8 +205,12 @@ public class LeaveService : ILeaveService
 
     public async Task<IEnumerable<LeaveTypeDto>> GetLeaveTypesAsync()
     {
-        var leaveTypes = await _unitOfWork.LeaveTypes.GetAllAsync();
-        return _mapper.Map<IEnumerable<LeaveTypeDto>>(leaveTypes);
+        return await _cache.GetOrCreateAsync("leave_types_all", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            var leaveTypes = await _unitOfWork.LeaveTypes.GetAllAsync();
+            return _mapper.Map<IEnumerable<LeaveTypeDto>>(leaveTypes);
+        }) ?? Array.Empty<LeaveTypeDto>();
     }
 
     public async Task<IEnumerable<LeaveRequestDto>> GetUpcomingLeavesAsync(int days = 30)
@@ -209,6 +228,41 @@ public class LeaveService : ILeaveService
         await PopulateNavigationPropertiesBulkAsync(leaveRequests);
         return _mapper.Map<IEnumerable<LeaveRequestDto>>(leaveRequests);
     }
+
+    public async Task<PaginatedResponse<LeaveRequestDto>> GetPagedLeaveRequestsAsync(int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.LeaveRequests.GetPagedAsync(null, page, pageSize, r => r.CreatedAt, true);
+        var itemList = items.ToList();
+        await PopulateNavigationPropertiesBulkAsync(itemList);
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<LeaveRequestDto>
+        {
+            Items = _mapper.Map<List<LeaveRequestDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
+    public async Task<PaginatedResponse<LeaveRequestDto>> GetPagedUserLeaveRequestsAsync(string userId, int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.LeaveRequests.GetPagedAsync(r => r.UserId == userId, page, pageSize, r => r.CreatedAt, true);
+        var itemList = items.ToList();
+        await PopulateNavigationPropertiesBulkAsync(itemList);
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<LeaveRequestDto>
+        {
+            Items = _mapper.Map<List<LeaveRequestDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
 
     private async Task PopulateNavigationPropertiesAsync(LeaveRequest r)
     {

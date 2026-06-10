@@ -54,10 +54,24 @@ public class UserService : IUserService
     {
         if (users == null || users.Count == 0) return;
 
-        var depts = (await _unitOfWork.Departments.GetAllAsync()).ToDictionary(d => d.Id);
-        var positions = (await _unitOfWork.Positions.GetAllAsync()).ToDictionary(p => p.Id);
-        var roles = (await _unitOfWork.Roles.GetAllAsync()).ToDictionary(r => r.Id);
-        var allUsers = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
+        var managerIds = users
+            .Where(u => !string.IsNullOrEmpty(u.ManagerId))
+            .Select(u => u.ManagerId!)
+            .ToHashSet();
+
+        var deptsTask     = _unitOfWork.Departments.GetAllAsync();
+        var positionsTask = _unitOfWork.Positions.GetAllAsync();
+        var rolesTask     = _unitOfWork.Roles.GetAllAsync();
+        var managersTask  = managerIds.Count > 0
+            ? _unitOfWork.Users.FindAsync(u => managerIds.Contains(u.Id))
+            : Task.FromResult<IEnumerable<User>>(Array.Empty<User>());
+
+        await Task.WhenAll(deptsTask, positionsTask, rolesTask, managersTask);
+
+        var depts    = deptsTask.Result.ToDictionary(d => d.Id);
+        var positions = positionsTask.Result.ToDictionary(p => p.Id);
+        var roles    = rolesTask.Result.ToDictionary(r => r.Id);
+        var managers = managersTask.Result.ToDictionary(u => u.Id);
 
         foreach (var user in users)
         {
@@ -70,7 +84,7 @@ public class UserService : IUserService
             if (!string.IsNullOrEmpty(user.RoleId) && roles.TryGetValue(user.RoleId, out var role))
                 user.Role = role;
 
-            if (!string.IsNullOrEmpty(user.ManagerId) && allUsers.TryGetValue(user.ManagerId, out var manager))
+            if (!string.IsNullOrEmpty(user.ManagerId) && managers.TryGetValue(user.ManagerId, out var manager))
                 user.Manager = manager;
         }
     }
@@ -79,25 +93,25 @@ public class UserService : IUserService
     {
         if (user == null) return;
 
-        if (!string.IsNullOrEmpty(user.DepartmentId) && user.Department == null)
-        {
-            user.Department = await _unitOfWork.Departments.GetByIdAsync(user.DepartmentId);
-        }
+        var deptTask    = !string.IsNullOrEmpty(user.DepartmentId) && user.Department == null
+            ? _unitOfWork.Departments.GetByIdAsync(user.DepartmentId)
+            : Task.FromResult<Department?>(null);
+        var posTask     = !string.IsNullOrEmpty(user.PositionId) && user.Position == null
+            ? _unitOfWork.Positions.GetByIdAsync(user.PositionId)
+            : Task.FromResult<Position?>(null);
+        var roleTask    = !string.IsNullOrEmpty(user.RoleId) && user.Role == null
+            ? _unitOfWork.Roles.GetByIdAsync(user.RoleId)
+            : Task.FromResult<Role?>(null);
+        var managerTask = !string.IsNullOrEmpty(user.ManagerId) && user.Manager == null
+            ? _unitOfWork.Users.GetByIdAsync(user.ManagerId)
+            : Task.FromResult<User?>(null);
 
-        if (!string.IsNullOrEmpty(user.PositionId) && user.Position == null)
-        {
-            user.Position = await _unitOfWork.Positions.GetByIdAsync(user.PositionId);
-        }
+        await Task.WhenAll(deptTask, posTask, roleTask, managerTask);
 
-        if (!string.IsNullOrEmpty(user.RoleId) && user.Role == null)
-        {
-            user.Role = await _unitOfWork.Roles.GetByIdAsync(user.RoleId);
-        }
-
-        if (!string.IsNullOrEmpty(user.ManagerId) && user.Manager == null)
-        {
-            user.Manager = await _unitOfWork.Users.GetByIdAsync(user.ManagerId);
-        }
+        if (deptTask.Result != null)    user.Department = deptTask.Result;
+        if (posTask.Result != null)     user.Position   = posTask.Result;
+        if (roleTask.Result != null)    user.Role       = roleTask.Result;
+        if (managerTask.Result != null) user.Manager    = managerTask.Result;
     }
 
     public async Task<UserDto> CreateUserAsync(CreateUserRequest request)
@@ -130,6 +144,23 @@ public class UserService : IUserService
     public async Task<bool> DeleteUserAsync(string id)
     {
         return await _unitOfWork.Users.DeleteAsync(id);
+    }
+
+    public async Task<PaginatedResponse<UserDto>> GetPagedUsersAsync(int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Users.GetPagedAsync(null, page, pageSize, u => u.CreatedAt, true);
+        var itemList = items.ToList();
+        await PopulateNavigationPropertiesBulkAsync(itemList);
+        
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<UserDto>
+        {
+            Items = _mapper.Map<List<UserDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<IEnumerable<UserDto>> GetUpcomingBirthdaysAsync(int days = 30)

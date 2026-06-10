@@ -114,6 +114,35 @@ public class AttendanceService : IAttendanceService
         return _mapper.Map<IEnumerable<AttendanceDto>>(attendanceRecords);
     }
 
+    public async Task<PaginatedResponse<AttendanceDto>> GetPagedAttendanceAsync(int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Attendances.GetPagedAsync(null, page, pageSize, a => a.CheckInTime, true);
+        var itemList = items.ToList();
+        
+        if (itemList.Any())
+        {
+            var userIds = itemList.Select(r => r.UserId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet();
+            var users = (await _unitOfWork.Users.FindAsync(u => userIds.Contains(u.Id))).ToDictionary(u => u.Id);
+            foreach (var r in itemList)
+            {
+                if (!string.IsNullOrEmpty(r.UserId) && users.TryGetValue(r.UserId, out var user))
+                {
+                    r.User = user;
+                }
+            }
+        }
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<AttendanceDto>
+        {
+            Items = _mapper.Map<List<AttendanceDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
     private async Task PopulateUserAsync(Attendance record)
     {
         if (record != null && !string.IsNullOrEmpty(record.UserId) && record.User == null)

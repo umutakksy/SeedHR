@@ -21,11 +21,11 @@ public class NotificationsController : ControllerBase
     }
 
     [HttpGet("my")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> GetMyNotifications()
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<NotificationDto>>>> GetMyNotifications([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var notifications = await _notificationService.GetUserNotificationsAsync(userId);
-        return Ok(ApiResponse<IEnumerable<NotificationDto>>.SuccessResponse(notifications, "Notifications retrieved successfully"));
+        var notifications = await _notificationService.GetPagedUserNotificationsAsync(userId, page, pageSize);
+        return Ok(ApiResponse<PaginatedResponse<NotificationDto>>.SuccessResponse(notifications, "Notifications retrieved successfully"));
     }
 
     [HttpGet("my/unread")]
@@ -53,7 +53,7 @@ public class NotificationsController : ControllerBase
     }
 
     [HttpGet("user/{userId}")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> GetUserNotifications(string userId)
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<NotificationDto>>>> GetUserNotifications(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
@@ -64,8 +64,8 @@ public class NotificationsController : ControllerBase
             return Forbid();
         }
 
-        var notifications = await _notificationService.GetUserNotificationsAsync(userId);
-        return Ok(ApiResponse<IEnumerable<NotificationDto>>.SuccessResponse(notifications, "Notifications retrieved successfully"));
+        var notifications = await _notificationService.GetPagedUserNotificationsAsync(userId, page, pageSize);
+        return Ok(ApiResponse<PaginatedResponse<NotificationDto>>.SuccessResponse(notifications, "Notifications retrieved successfully"));
     }
 
     [HttpPost("user/{userId}/read-all")]

@@ -34,7 +34,7 @@ public class RecruitmentService : IRecruitmentService
             CoverLetter = request.CoverLetter,
             AppliedDate = DateTime.UtcNow,
             Status = "New",
-            AiMatchScore = new Random().Next(60, 96)
+            AiMatchScore = null
         };
 
         var created = await _unitOfWork.Candidates.AddAsync(candidate);
@@ -61,7 +61,7 @@ public class RecruitmentService : IRecruitmentService
             CVContentType = cvContentType,
             AppliedDate = DateTime.UtcNow,
             Status = "New",
-            AiMatchScore = new Random().Next(60, 96)
+            AiMatchScore = null
         };
 
         var application = new CandidateApplication
@@ -110,6 +110,22 @@ public class RecruitmentService : IRecruitmentService
     {
         var candidates = await _unitOfWork.Candidates.GetAllAsync();
         return _mapper.Map<IEnumerable<CandidateDto>>(candidates);
+    }
+
+    public async Task<PaginatedResponse<CandidateDto>> GetPagedCandidatesAsync(int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Candidates.GetPagedAsync(null, page, pageSize, c => c.CreatedAt, true);
+        var itemList = items.ToList();
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<CandidateDto>
+        {
+            Items = _mapper.Map<List<CandidateDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<JobPostingDto> CreateJobPostingAsync(CreateJobPostingRequest request)
@@ -195,8 +211,18 @@ public class RecruitmentService : IRecruitmentService
         var jobPosting = await _unitOfWork.JobPostings.GetByIdAsync(request.JobPostingId)
             ?? throw new NotFoundException($"Job posting with ID {request.JobPostingId} not found");
 
-        var hrUser = (await _unitOfWork.Users.FindAsync(u => u.RoleId == "role_hr" || u.RoleId == "role_admin")).FirstOrDefault();
-        var interviewerId = hrUser?.Id ?? "default_interviewer";
+        var interviewerId = request.InterviewerUserId;
+        User? hrUser = null;
+        if (!string.IsNullOrEmpty(interviewerId))
+        {
+            hrUser = await _unitOfWork.Users.GetByIdAsync(interviewerId);
+        }
+
+        if (hrUser == null)
+        {
+            hrUser = (await _unitOfWork.Users.FindAsync(u => u.RoleId == "role_hr" || u.RoleId == "role_admin")).FirstOrDefault();
+            interviewerId = hrUser?.Id ?? "default_interviewer";
+        }
 
         var interview = new Interview
         {
@@ -227,9 +253,19 @@ public class RecruitmentService : IRecruitmentService
         var interviews = (await _unitOfWork.Interviews.GetAllAsync()).ToList();
         if (interviews.Any())
         {
-            var candidates = (await _unitOfWork.Candidates.GetAllAsync()).ToDictionary(c => c.Id);
-            var users = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
-            var jobPostings = (await _unitOfWork.JobPostings.GetAllAsync()).ToDictionary(j => j.Id);
+            var candidateIds = interviews.Select(i => i.CandidateId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet();
+            var userIds = interviews.Select(i => i.InterviewerUserId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet();
+            var jobPostingIds = interviews.Select(i => i.JobPostingId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet();
+
+            var candidatesTask = _unitOfWork.Candidates.FindAsync(c => candidateIds.Contains(c.Id));
+            var usersTask = _unitOfWork.Users.FindAsync(u => userIds.Contains(u.Id));
+            var jobPostingsTask = _unitOfWork.JobPostings.FindAsync(j => jobPostingIds.Contains(j.Id));
+
+            await Task.WhenAll(candidatesTask, usersTask, jobPostingsTask);
+
+            var candidates = candidatesTask.Result.ToDictionary(c => c.Id);
+            var users = usersTask.Result.ToDictionary(u => u.Id);
+            var jobPostings = jobPostingsTask.Result.ToDictionary(j => j.Id);
 
             foreach (var interview in interviews)
             {
@@ -326,12 +362,16 @@ public class RecruitmentService : IRecruitmentService
 
     public async Task<IEnumerable<ReferenceCheckDto>> GetReferencesForCandidateAsync(string candidateId)
     {
-        var refs = await _unitOfWork.ReferenceChecks.GetReferencesByCandidateAsync(candidateId);
+        var refs = (await _unitOfWork.ReferenceChecks.GetReferencesByCandidateAsync(candidateId)).ToList();
         var list = new List<ReferenceCheckDto>();
-        foreach (var r in refs)
+        if (refs.Any())
         {
-            r.Candidate = await _unitOfWork.Candidates.GetByIdAsync(r.CandidateId);
-            list.Add(_mapper.Map<ReferenceCheckDto>(r));
+            var candidate = await _unitOfWork.Candidates.GetByIdAsync(candidateId);
+            foreach (var r in refs)
+            {
+                r.Candidate = candidate;
+                list.Add(_mapper.Map<ReferenceCheckDto>(r));
+            }
         }
         return list;
     }

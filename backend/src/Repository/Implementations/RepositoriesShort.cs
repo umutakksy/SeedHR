@@ -1,5 +1,6 @@
 namespace SeedHR.Backend.Repository.Implementations;
 
+using MongoDB.Driver;
 using SeedHR.Backend.Data;
 using SeedHR.Backend.Models.Entities;
 using SeedHR.Backend.Repository.Interfaces;
@@ -97,16 +98,28 @@ public class AttendanceRepository : MongoRepository<Attendance>, IAttendanceRepo
     public AttendanceRepository(IMongoDbContext context) : base(context) { }
 
     public async Task<Attendance?> GetByUserAndDateAsync(string userId, DateTime date)
-        => await FirstOrDefaultAsync(a => a.UserId == userId && a.CheckInTime.HasValue && a.CheckInTime.Value.Date == date.Date);
+    {
+        var startOfDay = date.Date;
+        var endOfDay = startOfDay.AddDays(1);
+        return await FirstOrDefaultAsync(a => a.UserId == userId && a.CheckInTime.HasValue && a.CheckInTime.Value >= startOfDay && a.CheckInTime.Value < endOfDay);
+    }
 
     public async Task<IEnumerable<Attendance>> GetByUserAsync(string userId)
         => await FindAsync(a => a.UserId == userId);
 
     public async Task<IEnumerable<Attendance>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
-        => await FindAsync(a => a.CheckInTime.HasValue && a.CheckInTime.Value.Date >= startDate.Date && a.CheckInTime.Value.Date <= endDate.Date);
+    {
+        var start = startDate.Date;
+        var end = endDate.Date.AddDays(1);
+        return await FindAsync(a => a.CheckInTime.HasValue && a.CheckInTime.Value >= start && a.CheckInTime.Value < end);
+    }
 
     public async Task<IEnumerable<Attendance>> GetByUserDateRangeAsync(string userId, DateTime startDate, DateTime endDate)
-        => await FindAsync(a => a.UserId == userId && a.CheckInTime.HasValue && a.CheckInTime.Value.Date >= startDate.Date && a.CheckInTime.Value.Date <= endDate.Date);
+    {
+        var start = startDate.Date;
+        var end = endDate.Date.AddDays(1);
+        return await FindAsync(a => a.UserId == userId && a.CheckInTime.HasValue && a.CheckInTime.Value >= start && a.CheckInTime.Value < end);
+    }
 
     public async Task<IEnumerable<Attendance>> GetByStatusAsync(string status)
         => await FindAsync(a => a.Status == status);
@@ -127,13 +140,14 @@ public class AnnouncementRepository : MongoRepository<Announcement>, IAnnounceme
 
     public async Task<IEnumerable<Announcement>> GetRecentAsync(int count = 10)
     {
-        return await Task.Run(() =>
-            GetQueryable()
-                .Where(a => a.Status == "Published")
-                .OrderByDescending(a => a.PublishedDate)
-                .Take(count)
-                .ToList()
+        var filter = Builders<Announcement>.Filter.And(
+            Builders<Announcement>.Filter.Eq(a => a.Status, "Published"),
+            Builders<Announcement>.Filter.Eq(a => a.IsActive, true)
         );
+        return await _collection.Find(filter)
+            .SortByDescending(a => a.PublishedDate)
+            .Limit(count)
+            .ToListAsync();
     }
 }
 
@@ -149,12 +163,11 @@ public class CandidateRepository : MongoRepository<Candidate>, ICandidateReposit
 
     public async Task<IEnumerable<Candidate>> GetRecentAsync(int count = 10)
     {
-        return await Task.Run(() =>
-            GetQueryable()
-                .OrderByDescending(c => c.AppliedDate)
-                .Take(count)
-                .ToList()
-        );
+        var filter = Builders<Candidate>.Filter.Eq(c => c.IsActive, true);
+        return await _collection.Find(filter)
+            .SortByDescending(c => c.AppliedDate)
+            .Limit(count)
+            .ToListAsync();
     }
 }
 
@@ -194,12 +207,15 @@ public class NotificationRepository : MongoRepository<Notification>, INotificati
 
     public async Task<bool> MarkAllAsReadAsync(string userId)
     {
-        var notifications = await GetUnreadByUserAsync(userId);
-        foreach (var notif in notifications)
-        {
-            notif.IsRead = true;
-            await UpdateAsync(notif);
-        }
+        var filter = Builders<Notification>.Filter.And(
+            Builders<Notification>.Filter.Eq(n => n.UserId, userId),
+            Builders<Notification>.Filter.Eq(n => n.IsRead, false),
+            Builders<Notification>.Filter.Eq(n => n.IsActive, true)
+        );
+        var update = Builders<Notification>.Update
+            .Set(n => n.IsRead, true)
+            .Set(n => n.UpdatedAt, DateTime.UtcNow);
+        await _collection.UpdateManyAsync(filter, update);
         return true;
     }
 }
@@ -221,6 +237,16 @@ public class PerformanceEvaluationRepository : MongoRepository<PerformanceEvalua
 
     public async Task<IEnumerable<PerformanceEvaluation>> GetByPeriodAsync(string period)
         => await FindAsync(pe => pe.Period == period);
+
+    public async Task<double> GetAverageRatingAsync()
+    {
+        var filter = Builders<PerformanceEvaluation>.Filter.Eq(e => e.IsActive, true);
+        var result = await _collection.Aggregate()
+            .Match(filter)
+            .Group(x => 1, g => new { Avg = g.Average(x => (double)x.Rating) })
+            .FirstOrDefaultAsync();
+        return result != null ? Math.Round(result.Avg, 1) : 0.0;
+    }
 }
 
 public class InterviewRepository : MongoRepository<Interview>, IInterviewRepository
@@ -414,7 +440,11 @@ public class EmployeeShiftRepository : MongoRepository<EmployeeShift>, IEmployee
         => await FindAsync(es => es.Date >= start && es.Date <= end && es.IsActive);
 
     public async Task<EmployeeShift?> GetShiftByUserAndDateAsync(string userId, DateTime date)
-        => await FirstOrDefaultAsync(es => es.UserId == userId && es.Date.Date == date.Date && es.IsActive);
+    {
+        var startOfDay = date.Date;
+        var endOfDay = startOfDay.AddDays(1);
+        return await FirstOrDefaultAsync(es => es.UserId == userId && es.Date >= startOfDay && es.Date < endOfDay && es.IsActive);
+    }
 }
 
 public class VisitorLogRepository : MongoRepository<VisitorLog>, IVisitorLogRepository

@@ -9,4 +9,5 @@ public interface IAttendanceService
     Task<AttendanceDto?> GetAttendanceRecordAsync(string userId, DateTime date);
     Task<IEnumerable<AttendanceDto>> GetUserAttendanceAsync(string userId, DateTime startDate, DateTime endDate);
     Task<IEnumerable<AttendanceDto>> GetAllAttendanceAsync();
+    Task<PaginatedResponse<AttendanceDto>> GetPagedAttendanceAsync(int page, int pageSize);
 }

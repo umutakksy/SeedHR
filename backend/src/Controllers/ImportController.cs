@@ -9,6 +9,11 @@ using SeedHR.Backend.Data;
 using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Models.Entities;
 using SeedHR.Backend.Security.Authentication;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -22,6 +27,13 @@ public class ImportController : ControllerBase
     {
         _context = context;
         _passwordHasher = passwordHasher;
+    }
+
+    private static string GenerateRandomPassword()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 10).Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
     /// <summary>
@@ -57,6 +69,7 @@ public class ImportController : ControllerBase
                 var sheetName = sheetNames.First(s => s.Equals("Departments", StringComparison.OrdinalIgnoreCase) || s.Equals("Departmanlar", StringComparison.OrdinalIgnoreCase));
                 var rows = MiniExcel.Query(stream, sheetName: sheetName, useHeaderRow: true).ToList();
 
+                var departmentsToInsert = new List<Department>();
                 foreach (var row in rows)
                 {
                     try
@@ -80,13 +93,18 @@ public class ImportController : ControllerBase
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
                         };
-                        await _context.Departments.InsertOneAsync(dept);
-                        result.DepartmentsImported++;
+                        departmentsToInsert.Add(dept);
                     }
                     catch (Exception ex)
                     {
                         errors.Add($"Departments satır hatası: {ex.Message}");
                     }
+                }
+
+                if (departmentsToInsert.Any())
+                {
+                    await _context.Departments.InsertManyAsync(departmentsToInsert);
+                    result.DepartmentsImported = departmentsToInsert.Count;
                 }
             }
 
@@ -101,6 +119,7 @@ public class ImportController : ControllerBase
                 var allDepts = await _context.Departments.Find(MongoDB.Driver.Builders<Department>.Filter.Empty).ToListAsync();
                 var deptLookup = allDepts.ToDictionary(d => d.Name.ToLowerInvariant(), d => d.Id);
 
+                var positionsToInsert = new List<Position>();
                 foreach (var row in rows)
                 {
                     try
@@ -130,13 +149,18 @@ public class ImportController : ControllerBase
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
                         };
-                        await _context.Positions.InsertOneAsync(pos);
-                        result.PositionsImported++;
+                        positionsToInsert.Add(pos);
                     }
                     catch (Exception ex)
                     {
                         errors.Add($"Positions satır hatası: {ex.Message}");
                     }
+                }
+
+                if (positionsToInsert.Any())
+                {
+                    await _context.Positions.InsertManyAsync(positionsToInsert);
+                    result.PositionsImported = positionsToInsert.Count;
                 }
             }
 
@@ -157,8 +181,7 @@ public class ImportController : ControllerBase
                 var allRoles = await _context.Roles.Find(MongoDB.Driver.Builders<Role>.Filter.Empty).ToListAsync();
                 var roleLookup = allRoles.ToDictionary(r => r.Name.ToLowerInvariant(), r => r.Id);
 
-                var defaultPassword = _passwordHasher.Hash("SeedHR2026!");
-
+                var usersToInsert = new List<User>();
                 foreach (var row in rows)
                 {
                     try
@@ -185,6 +208,12 @@ public class ImportController : ControllerBase
                             continue;
                         }
 
+                        if (usersToInsert.Any(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            errors.Add($"Users: '{email}' dosya içinde mükerrer, atlandı.");
+                            continue;
+                        }
+
                         // Resolve department
                         string? deptId = null;
                         var deptName = GetValue(dict, "Department", "Departman", "DepartmanAdi");
@@ -205,11 +234,25 @@ public class ImportController : ControllerBase
                         DateTime? dob = ParseDate(GetValue(dict, "DateOfBirth", "DogumTarihi", "Dogum"));
                         DateTime? hireDate = ParseDate(GetValue(dict, "HireDate", "IseBaslamaTarihi", "BaslamaTarihi"));
 
+                        // Resolve password
+                        var password = GetValue(dict, "Password", "Sifre", "Parola");
+                        string clearPassword;
+                        if (!string.IsNullOrEmpty(password))
+                        {
+                            clearPassword = password;
+                        }
+                        else
+                        {
+                            clearPassword = GenerateRandomPassword();
+                            result.TempPasswords[email] = clearPassword;
+                        }
+                        var hashedPassword = _passwordHasher.Hash(clearPassword);
+
                         var user = new User
                         {
                             Id = ObjectId.GenerateNewId().ToString(),
                             Email = email,
-                            PasswordHash = defaultPassword,
+                            PasswordHash = hashedPassword,
                             FirstName = firstName,
                             LastName = lastName,
                             Phone = GetValue(dict, "Phone", "Telefon", "Tel") ?? "",
@@ -229,13 +272,18 @@ public class ImportController : ControllerBase
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
                         };
-                        await _context.Users.InsertOneAsync(user);
-                        result.UsersImported++;
+                        usersToInsert.Add(user);
                     }
                     catch (Exception ex)
                     {
                         errors.Add($"Users satır hatası: {ex.Message}");
                     }
+                }
+
+                if (usersToInsert.Any())
+                {
+                    await _context.Users.InsertManyAsync(usersToInsert);
+                    result.UsersImported = usersToInsert.Count;
                 }
             }
 
@@ -291,7 +339,8 @@ public class ImportController : ControllerBase
                     BaslamaTarihi = "",
                     Lokasyon = "",
                     AcilKisiAdi = "",
-                    AcilKisiTel = ""
+                    AcilKisiTel = "",
+                    Sifre = ""
                 }
             }
         };
@@ -338,4 +387,5 @@ public class ImportResultDto
     public int DepartmentsImported { get; set; }
     public int PositionsImported { get; set; }
     public List<string> Errors { get; set; } = new();
+    public Dictionary<string, string> TempPasswords { get; set; } = new();
 }

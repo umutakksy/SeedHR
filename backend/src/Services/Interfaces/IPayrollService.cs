@@ -10,5 +10,6 @@ public interface IPayrollService
     Task<PayrollDto> GetPayrollByIdAsync(string id);
     Task<IEnumerable<PayrollDto>> GetPayrollsByUserAsync(string userId);
     Task<IEnumerable<PayrollDto>> GetPayrollsByPeriodAsync(string period);
+    Task<PaginatedResponse<PayrollDto>> GetPagedPayrollsByPeriodAsync(string period, int page, int pageSize);
     Task<PayrollDto> UpdatePayrollStatusAsync(string id, string status);
 }

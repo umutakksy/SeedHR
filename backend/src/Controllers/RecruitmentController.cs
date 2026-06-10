@@ -57,10 +57,10 @@ public class RecruitmentController : ControllerBase
     }
 
     [HttpGet("candidates")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<CandidateDto>>>> GetCandidates()
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<CandidateDto>>>> GetCandidates([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var candidates = await _recruitmentService.GetCandidatesAsync();
-        return Ok(ApiResponse<IEnumerable<CandidateDto>>.SuccessResponse(candidates, "Candidates retrieved successfully"));
+        var candidates = await _recruitmentService.GetPagedCandidatesAsync(page, pageSize);
+        return Ok(ApiResponse<PaginatedResponse<CandidateDto>>.SuccessResponse(candidates, "Candidates retrieved successfully"));
     }
 
     [HttpPost("job-postings")]

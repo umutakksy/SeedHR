@@ -74,7 +74,13 @@ builder.Services.AddControllers()
         // The default format returns errors as Dictionary which doesn't match our List<string> ApiResponse
         options.SuppressModelStateInvalidFilter = true;
     });
-builder.Services.AddHttpClient(); // For AiController (Groq API calls)
+builder.Services.AddMemoryCache();
+var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "";
+builder.Services.AddHttpClient("groq", c =>
+{
+    c.DefaultRequestHeaders.Add("Authorization", $"Bearer {groqKey}");
+    c.BaseAddress = new Uri("https://api.groq.com/");
+});
 
 // Add MongoDB configuration
 builder.Services.Configure<MongoDbSettings>(
@@ -182,6 +188,14 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Add Rate Limiting
+builder.Services.AddRateLimiter(opt => {
+    opt.AddFixedWindowLimiter("ai", o => {
+        o.PermitLimit = 10;
+        o.Window = TimeSpan.FromMinutes(1);
+    });
+});
+
 var app = builder.Build();
 
 // Initialize MongoDB indexes and seed data
@@ -216,7 +230,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// app.UseRateLimiter();
+app.UseRateLimiter();
 
 // Custom Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();

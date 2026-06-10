@@ -6,6 +6,7 @@ using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Services.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -55,24 +56,34 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<IEnumerable<AttendanceDto>>>> GetAll()
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<AttendanceDto>>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
 
-        IEnumerable<AttendanceDto> records;
+        PaginatedResponse<AttendanceDto> result;
         if (role == "Admin" || role == "HR")
         {
-            records = await _attendanceService.GetAllAttendanceAsync();
+            result = await _attendanceService.GetPagedAttendanceAsync(page, pageSize);
         }
         else
         {
             if (string.IsNullOrEmpty(userId))
-                return BadRequest(ApiResponse<IEnumerable<AttendanceDto>>.ErrorResponse("User ID is required"));
-            records = await _attendanceService.GetUserAttendanceAsync(userId, DateTime.MinValue, DateTime.MaxValue);
+                return BadRequest(ApiResponse<PaginatedResponse<AttendanceDto>>.ErrorResponse("User ID is required"));
+            
+            var records = (await _attendanceService.GetUserAttendanceAsync(userId, DateTime.MinValue, DateTime.MaxValue)).ToList();
+            var totalCount = records.Count;
+            result = new PaginatedResponse<AttendanceDto>
+            {
+                Items = records.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
         }
 
-        return Ok(ApiResponse<IEnumerable<AttendanceDto>>.SuccessResponse(records, "Attendance records retrieved successfully"));
+        return Ok(ApiResponse<PaginatedResponse<AttendanceDto>>.SuccessResponse(result, "Attendance records retrieved successfully"));
     }
 
     [HttpGet("user/{userId}")]

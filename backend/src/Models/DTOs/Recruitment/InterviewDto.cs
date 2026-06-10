@@ -22,6 +22,7 @@ public class CreateInterviewRequest
     public DateTime ScheduledDate { get; set; }
     public string Type { get; set; } = null!;
     public string? Location { get; set; }
+    public string? InterviewerUserId { get; set; }
 }
 
 public class CompleteInterviewRequest

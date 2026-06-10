@@ -5,19 +5,24 @@ using MongoDB.Driver;
 using SeedHR.Backend.Data;
 using SeedHR.Backend.Models.Entities;
 using SeedHR.Backend.Repository.Interfaces;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 
 public class MongoRepository<T> : IRepository<T> where T : BaseEntity
 {
     protected readonly IMongoCollection<T> _collection;
 
+    private static readonly ConcurrentDictionary<Type, PropertyInfo> _propertyCache = new();
+
     public MongoRepository(IMongoDbContext context)
     {
-        var collectionName = typeof(T).Name.ToLowerInvariant() + "s";
-        if (typeof(T).Name == "Role" || typeof(T).Name == "Permission")
-            collectionName = typeof(T).Name.ToLowerInvariant() + "s";
-
-        _collection = context.GetType().GetProperty(typeof(T).Name + "s")?.GetValue(context) as IMongoCollection<T>
+        var prop = _propertyCache.GetOrAdd(
+            typeof(T),
+            t => context.GetType().GetProperty(t.Name + "s")
+                 ?? throw new InvalidOperationException($"Collection not found for type {t.Name}")
+        );
+        _collection = prop.GetValue(context) as IMongoCollection<T>
             ?? throw new InvalidOperationException($"Collection not found for type {typeof(T).Name}");
     }
 
@@ -132,6 +137,38 @@ public class MongoRepository<T> : IRepository<T> where T : BaseEntity
     public Task<bool> SaveChangesAsync()
     {
         return Task.FromResult(true);
+    }
+
+    public async Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(
+        Expression<Func<T, bool>>? filter,
+        int page,
+        int pageSize,
+        Expression<Func<T, object>>? sortBy = null,
+        bool descending = false
+    )
+    {
+        var baseFilter = Builders<T>.Filter.Eq(e => e.IsActive, true);
+        if (filter != null)
+        {
+            baseFilter = Builders<T>.Filter.And(baseFilter, Builders<T>.Filter.Where(filter));
+        }
+
+        var totalCount = (int)await _collection.CountDocumentsAsync(baseFilter);
+
+        var query = _collection.Find(baseFilter);
+        if (sortBy != null)
+        {
+            query = descending 
+                ? query.SortByDescending(sortBy) 
+                : query.SortBy(sortBy);
+        }
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 
     public IQueryable<T> GetQueryable()

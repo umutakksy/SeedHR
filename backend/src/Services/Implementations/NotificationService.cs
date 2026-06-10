@@ -51,6 +51,22 @@ public class NotificationService : INotificationService
         return _mapper.Map<IEnumerable<NotificationDto>>(notifications);
     }
 
+    public async Task<PaginatedResponse<NotificationDto>> GetPagedUserNotificationsAsync(string userId, int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Notifications.GetPagedAsync(n => n.UserId == userId, page, pageSize, n => n.SentDate, true);
+        var itemList = items.ToList();
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<NotificationDto>
+        {
+            Items = _mapper.Map<List<NotificationDto>>(itemList),
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
     public async Task<IEnumerable<NotificationDto>> GetUnreadNotificationsAsync(string userId)
     {
         var notifications = await _unitOfWork.Notifications.GetUnreadByUserAsync(userId);
@@ -71,15 +87,7 @@ public class NotificationService : INotificationService
 
     public async Task<bool> MarkAllAsReadAsync(string userId)
     {
-        var notifications = await _unitOfWork.Notifications.GetUnreadByUserAsync(userId);
-        foreach (var notification in notifications)
-        {
-            notification.IsRead = true;
-            await _unitOfWork.Notifications.UpdateAsync(notification);
-        }
-        await _unitOfWork.SaveChangesAsync();
-
-        return true;
+        return await _unitOfWork.Notifications.MarkAllAsReadAsync(userId);
     }
 
     public async Task<bool> DeleteNotificationAsync(string id)

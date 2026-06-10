@@ -19,10 +19,10 @@ public class UsersController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin,HR")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<UserDto>>>> GetAllUsers()
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<UserDto>>>> GetAllUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var users = await _userService.GetAllUsersAsync();
-        return Ok(ApiResponse<IEnumerable<UserDto>>.SuccessResponse(users, "Users retrieved successfully"));
+        var users = await _userService.GetPagedUsersAsync(page, pageSize);
+        return Ok(ApiResponse<PaginatedResponse<UserDto>>.SuccessResponse(users, "Users retrieved successfully"));
     }
 
     [HttpGet("{id}")]

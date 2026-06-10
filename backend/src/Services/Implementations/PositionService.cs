@@ -1,6 +1,7 @@
 namespace SeedHR.Backend.Services.Implementations;
 
 using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using SeedHR.Backend.Exceptions;
 using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Models.Entities;
@@ -11,11 +12,13 @@ public class PositionService : IPositionService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IMemoryCache _cache;
 
-    public PositionService(IUnitOfWork unitOfWork, IMapper mapper)
+    public PositionService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<PositionDto> GetPositionByIdAsync(string id)
@@ -27,8 +30,12 @@ public class PositionService : IPositionService
 
     public async Task<IEnumerable<PositionDto>> GetAllPositionsAsync()
     {
-        var positions = await _unitOfWork.Positions.GetAllAsync();
-        return _mapper.Map<IEnumerable<PositionDto>>(positions);
+        return await _cache.GetOrCreateAsync("positions_all", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            var positions = await _unitOfWork.Positions.GetAllAsync();
+            return _mapper.Map<IEnumerable<PositionDto>>(positions);
+        }) ?? Array.Empty<PositionDto>();
     }
 
     public async Task<IEnumerable<PositionDto>> GetPositionsByDepartmentAsync(string departmentId)
@@ -60,6 +67,7 @@ public class PositionService : IPositionService
 
         var created = await _unitOfWork.Positions.AddAsync(position);
         await _unitOfWork.SaveChangesAsync();
+        _cache.Remove("positions_all");
 
         return _mapper.Map<PositionDto>(created);
     }
@@ -87,12 +95,18 @@ public class PositionService : IPositionService
 
         var updated = await _unitOfWork.Positions.UpdateAsync(position);
         await _unitOfWork.SaveChangesAsync();
+        _cache.Remove("positions_all");
 
         return _mapper.Map<PositionDto>(updated);
     }
 
     public async Task<bool> DeletePositionAsync(string id)
     {
-        return await _unitOfWork.Positions.DeleteAsync(id);
+        var result = await _unitOfWork.Positions.DeleteAsync(id);
+        if (result)
+        {
+            _cache.Remove("positions_all");
+        }
+        return result;
     }
 }

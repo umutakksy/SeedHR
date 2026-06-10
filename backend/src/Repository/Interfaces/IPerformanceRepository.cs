@@ -11,4 +11,5 @@ public interface IPerformanceEvaluationRepository : IRepository<PerformanceEvalu
 {
     Task<IEnumerable<PerformanceEvaluation>> GetByUserAsync(string userId);
     Task<IEnumerable<PerformanceEvaluation>> GetByPeriodAsync(string period);
+    Task<double> GetAverageRatingAsync();
 }

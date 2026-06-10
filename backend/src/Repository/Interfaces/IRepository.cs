@@ -18,5 +18,12 @@ public interface IRepository<T> where T : BaseEntity
     Task<bool> DeleteAsync(T entity);
     Task<bool> DeleteRangeAsync(Expression<Func<T, bool>> predicate);
     Task<bool> SaveChangesAsync();
+    Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(
+        Expression<Func<T, bool>>? filter,
+        int page,
+        int pageSize,
+        Expression<Func<T, object>>? sortBy = null,
+        bool descending = false
+    );
     IQueryable<T> GetQueryable();
 }

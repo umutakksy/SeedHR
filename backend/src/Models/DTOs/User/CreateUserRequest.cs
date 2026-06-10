@@ -18,6 +18,7 @@ public class CreateUserRequest
     public string? ManagerId { get; set; }
     public DateTime? HireDate { get; set; }
     public string? Location { get; set; }
+    public decimal BaseSalary { get; set; }
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
     public string RoleId { get; set; } = null!;

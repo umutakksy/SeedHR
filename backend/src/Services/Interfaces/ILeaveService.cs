@@ -18,4 +18,6 @@ public interface ILeaveService
 
     Task<IEnumerable<LeaveRequestDto>> GetUpcomingLeavesAsync(int days = 30);
     Task<IEnumerable<LeaveRequestDto>> GetAllLeaveRequestsAsync();
+    Task<PaginatedResponse<LeaveRequestDto>> GetPagedLeaveRequestsAsync(int page, int pageSize);
+    Task<PaginatedResponse<LeaveRequestDto>> GetPagedUserLeaveRequestsAsync(string userId, int page, int pageSize);
 }

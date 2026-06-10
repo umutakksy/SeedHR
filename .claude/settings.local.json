@@ -13,7 +13,8 @@
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"D:\\\\Projeler\\\\SeedHR\\\\frontend\\\\src\" -Recurse -Include \"*.tsx\",\"*.jsx\",\"*.js\",\"*.ts\")",
       "Bash(Select-Object FullName)",
-      "Bash(Head-Limit 30)"
+      "Bash(Head-Limit 30)",
+      "Bash(dotnet build *)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 namespace SeedHR.Backend.Services.Implementations;
 
 using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using SeedHR.Backend.Exceptions;
 using SeedHR.Backend.Models.DTOs;
 using SeedHR.Backend.Models.Entities;
@@ -11,11 +12,13 @@ public class DepartmentService : IDepartmentService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IMemoryCache _cache;
 
-    public DepartmentService(IUnitOfWork unitOfWork, IMapper mapper)
+    public DepartmentService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<DepartmentDto> GetDepartmentByIdAsync(string id)
@@ -27,8 +30,12 @@ public class DepartmentService : IDepartmentService
 
     public async Task<IEnumerable<DepartmentDto>> GetAllDepartmentsAsync()
     {
-        var departments = await _unitOfWork.Departments.GetAllAsync();
-        return _mapper.Map<IEnumerable<DepartmentDto>>(departments);
+        return await _cache.GetOrCreateAsync("departments_all", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            var departments = await _unitOfWork.Departments.GetAllAsync();
+            return _mapper.Map<IEnumerable<DepartmentDto>>(departments);
+        }) ?? Array.Empty<DepartmentDto>();
     }
 
     public async Task<DepartmentDto> CreateDepartmentAsync(CreateDepartmentRequest request)
@@ -47,6 +54,7 @@ public class DepartmentService : IDepartmentService
 
         var created = await _unitOfWork.Departments.AddAsync(department);
         await _unitOfWork.SaveChangesAsync();
+        _cache.Remove("departments_all");
 
         return _mapper.Map<DepartmentDto>(created);
     }
@@ -70,12 +78,18 @@ public class DepartmentService : IDepartmentService
 
         var updated = await _unitOfWork.Departments.UpdateAsync(department);
         await _unitOfWork.SaveChangesAsync();
+        _cache.Remove("departments_all");
 
         return _mapper.Map<DepartmentDto>(updated);
     }
 
     public async Task<bool> DeleteDepartmentAsync(string id)
     {
-        return await _unitOfWork.Departments.DeleteAsync(id);
+        var result = await _unitOfWork.Departments.DeleteAsync(id);
+        if (result)
+        {
+            _cache.Remove("departments_all");
+        }
+        return result;
     }
 }

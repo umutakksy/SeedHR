@@ -11,6 +11,7 @@ public interface IRecruitmentService
     Task<CandidateDto> GetCandidateByIdAsync(string id);
     Task<(byte[] Content, string ContentType, string FileName)> GetCandidateCVAsync(string candidateId);
     Task<IEnumerable<CandidateDto>> GetCandidatesAsync();
+    Task<PaginatedResponse<CandidateDto>> GetPagedCandidatesAsync(int page, int pageSize);
 
     Task<JobPostingDto> CreateJobPostingAsync(CreateJobPostingRequest request);
     Task<JobPostingDto> GetJobPostingByIdAsync(string id);

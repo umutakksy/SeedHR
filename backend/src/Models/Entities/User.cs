@@ -23,6 +23,7 @@ public class User : BaseEntity
     public User? Manager { get; set; }
     public DateTime? HireDate { get; set; }
     public string? Location { get; set; }
+    public decimal BaseSalary { get; set; }
 
     // Acil durum kişisi
     public string? EmergencyContactName { get; set; }

@@ -28,10 +28,10 @@ public class PayrollsController : ControllerBase
 
     [HttpGet("period/{period}")]
     [Authorize(Roles = "Admin,HR")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<PayrollDto>>>> GetPeriodPayrolls(string period)
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<PayrollDto>>>> GetPeriodPayrolls(string period, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var list = await _payrollService.GetPayrollsByPeriodAsync(period);
-        return Ok(ApiResponse<IEnumerable<PayrollDto>>.SuccessResponse(list, "Period payrolls retrieved successfully"));
+        var list = await _payrollService.GetPagedPayrollsByPeriodAsync(period, page, pageSize);
+        return Ok(ApiResponse<PaginatedResponse<PayrollDto>>.SuccessResponse(list, "Period payrolls retrieved successfully"));
     }
 
     [HttpGet("{id}")]

@@ -35,25 +35,25 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet("requests")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<LeaveRequestDto>>>> GetUserLeaveRequests()
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<LeaveRequestDto>>>> GetUserLeaveRequests([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
 
         if (string.IsNullOrEmpty(userId))
-            return BadRequest(ApiResponse<IEnumerable<LeaveRequestDto>>.ErrorResponse("User ID is required"));
+            return BadRequest(ApiResponse<PaginatedResponse<LeaveRequestDto>>.ErrorResponse("User ID is required"));
 
-        IEnumerable<LeaveRequestDto> leaveRequests;
+        PaginatedResponse<LeaveRequestDto> leaveRequests;
         if (role == "Admin" || role == "HR" || role == "Manager")
         {
-            leaveRequests = await _leaveService.GetAllLeaveRequestsAsync();
+            leaveRequests = await _leaveService.GetPagedLeaveRequestsAsync(page, pageSize);
         }
         else
         {
-            leaveRequests = await _leaveService.GetUserLeaveRequestsAsync(userId);
+            leaveRequests = await _leaveService.GetPagedUserLeaveRequestsAsync(userId, page, pageSize);
         }
 
-        return Ok(ApiResponse<IEnumerable<LeaveRequestDto>>.SuccessResponse(leaveRequests, "Leave requests retrieved successfully"));
+        return Ok(ApiResponse<PaginatedResponse<LeaveRequestDto>>.SuccessResponse(leaveRequests, "Leave requests retrieved successfully"));
     }
 
     [HttpGet("requests/user/{userId}")]

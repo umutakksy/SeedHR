@@ -6,6 +6,7 @@ using SeedHR.Backend.Repository.Interfaces;
 using SeedHR.Backend.Services.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SeedHR.Backend.Services.Implementations;
@@ -34,11 +35,15 @@ public class PayrollService : IPayrollService
             await _unitOfWork.Payrolls.DeleteAsync(existing.Id);
         }
 
-        // Determine base salary dynamically by role
-        decimal baseSalary = 45000;
-        if (user.RoleId == "role_admin") baseSalary = 120000;
-        else if (user.RoleId == "role_manager") baseSalary = 75000;
-        else if (user.RoleId == "role_hr") baseSalary = 60000;
+        // Determine base salary dynamically by user or role, with fallback
+        decimal baseSalary = user.BaseSalary;
+        if (baseSalary <= 0)
+        {
+            if (user.RoleId == "role_admin") baseSalary = 120000;
+            else if (user.RoleId == "role_manager") baseSalary = 75000;
+            else if (user.RoleId == "role_hr") baseSalary = 60000;
+            else baseSalary = 45000;
+        }
 
         decimal hourlyRate = baseSalary / 225; // Standard working hours per month
         decimal overtimeRate = Math.Round(hourlyRate * 1.5m, 2);
@@ -101,16 +106,53 @@ public class PayrollService : IPayrollService
 
     public async Task<IEnumerable<PayrollDto>> GetPayrollsByPeriodAsync(string period)
     {
-        var list = await _unitOfWork.Payrolls.GetPayrollsByPeriodAsync(period);
+        var list = (await _unitOfWork.Payrolls.GetPayrollsByPeriodAsync(period)).ToList();
         var dtos = new List<PayrollDto>();
-        foreach (var p in list)
+        if (list.Any())
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(p.UserId);
-            var dto = _mapper.Map<PayrollDto>(p);
-            dto.UserFullName = user?.FullName ?? "Unknown User";
-            dtos.Add(dto);
+            var userIds = list.Select(p => p.UserId).ToHashSet();
+            var users = (await _unitOfWork.Users.FindAsync(u => userIds.Contains(u.Id)))
+                .ToDictionary(u => u.Id);
+
+            foreach (var p in list)
+            {
+                var dto = _mapper.Map<PayrollDto>(p);
+                dto.UserFullName = users.TryGetValue(p.UserId, out var user) ? user.FullName : "Unknown User";
+                dtos.Add(dto);
+            }
         }
         return dtos;
+    }
+
+    public async Task<PaginatedResponse<PayrollDto>> GetPagedPayrollsByPeriodAsync(string period, int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Payrolls.GetPagedAsync(p => p.Period == period, page, pageSize, p => p.CreatedAt, true);
+        var itemList = items.ToList();
+        var dtos = new List<PayrollDto>();
+
+        if (itemList.Any())
+        {
+            var userIds = itemList.Select(p => p.UserId).ToHashSet();
+            var users = (await _unitOfWork.Users.FindAsync(u => userIds.Contains(u.Id)))
+                .ToDictionary(u => u.Id);
+
+            foreach (var p in itemList)
+            {
+                var dto = _mapper.Map<PayrollDto>(p);
+                dto.UserFullName = users.TryGetValue(p.UserId, out var user) ? user.FullName : "Unknown User";
+                dtos.Add(dto);
+            }
+        }
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PaginatedResponse<PayrollDto>
+        {
+            Items = dtos,
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<PayrollDto> UpdatePayrollStatusAsync(string id, string status)
