@@ -130,7 +130,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-[#070d0b] font-sans items-center justify-center p-4 transition-colors">
+    <div
+      className="flex min-h-screen font-sans items-center justify-center p-4 transition-colors"
+      style={{ backgroundImage: "url('/bg.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+    >
       <Toaster position="top-right" />
 
       {/* Main card wrapper */}

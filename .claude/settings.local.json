@@ -10,7 +10,10 @@
       "Bash(git commit -m 'fix: include .env and appsettings files in Docker image *)",
       "Bash(git commit -m 'docs: add comprehensive technical documentation *)",
       "Bash(Get-ChildItem -Path \".\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Projeler\\\\SeedHR\\\\frontend\\\\src\" -Recurse -Include \"*.tsx\",\"*.jsx\",\"*.js\",\"*.ts\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Head-Limit 30)"
     ]
   }
 }
