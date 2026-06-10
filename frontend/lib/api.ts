@@ -1241,6 +1241,14 @@ export const mockDb = new LocalDatabase();
 async function wrapApiCall<T>(apiCall: () => Promise<{ data: ApiResponse<T> }>, mockFallback: () => T, customMsg?: string): Promise<ApiResponse<T>> {
   try {
     const res = await apiCall();
+    if (res.data && res.data.success && res.data.data && typeof res.data.data === "object" && !Array.isArray(res.data.data)) {
+      const dataObj = res.data.data as any;
+      if (Array.isArray(dataObj.items)) {
+        res.data.data = dataObj.items;
+      } else if (Array.isArray(dataObj.Items)) {
+        res.data.data = dataObj.Items;
+      }
+    }
     return res.data;
   } catch (err: any) {
     // If backend is offline or network connection is refused, run the mock fallback engine
