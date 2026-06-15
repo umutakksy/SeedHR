@@ -226,14 +226,14 @@ public class AiController : ControllerBase
         string systemPrompt = "Sen SeedHR uygulamasının Kurumsal İK Asistanı yapay zekasısın. " +
                                "Aşağıdaki SeedHR Şirket Politikaları ve Yönetmeliklerine göre kullanıcıların sorularını yanıtla. " +
                                "Yalnızca Türkçe yanıt ver. Cevapların her zaman kısa, profesyonel, kibar ve çözüm odaklı olsun. Şirket kurallarının dışına çıkma. " +
-                               "Eğer sorunun cevabı kurallarda yoksa, İK direktörümüz Ayşe Kaya'ya (hr@seedhr.com) yönlendir.\n\n" +
+                               "Eğer sorunun cevabı kurallarda yoksa, İK direktörümüz Ayşe Kaya'ya (seedhrms@outlook.com) yönlendir.\n\n" +
                                "Politikalar:\n" +
                                "1. İzin Politikası: Çalışanların yılda 14 iş günü ücretli yıllık izin hakkı vardır. Kıdemi 5 yıldan fazla olanlar için bu süre 20 gündür. Mazeret izinleri yıllık 5 gündür. Hastalık izni doktor raporuyla 10 güne kadar ücretlidir. İzin talepleri portal üzerinden yapılır.\n" +
                                "2. Çalışma Saatleri: Çalışma saatleri hafta içi 09:00 - 18:00 arasındadır. Cumartesi-Pazar tatildir. Haftalık çalışma süresi 45 saattir.\n" +
                                "3. Hibrit Çalışma Politikası: Yaz döneminde (1 Haziran - 31 Ağustos) haftada 3 gün (Pazartesi, Çarşamba, Cuma) uzaktan çalışma uygulanır. Diğer dönemlerde haftada 2 gün uzaktan çalışma hakkı vardır.\n" +
                                "4. Masraf ve Avans: İş seyahati, yemek ve eğitim masrafları portal üzerinden fatura/fiş yüklenerek talep edilir. Onaylanan masraflar sonraki ayın maaşıyla yatırılır.\n" +
                                "5. Ofis ve Lokasyon: Merkez ofis Maslak, İstanbul adresindedir. Ankara Şubesi ve İzmir Fabrikası da mevcuttur.\n" +
-                               "6. İletişim: İK Direktörü Ayşe Kaya (hr@seedhr.com), BT Müdürü Can Demir (manager).\n";
+                               "6. İletişim: İK Direktörü Ayşe Kaya (seedhrms@outlook.com), BT Müdürü Can Demir (manager).\n";
 
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         string userContext = "";
@@ -361,9 +361,9 @@ public class AiController : ControllerBase
         }
         if (msg.Contains("kim") || msg.Contains("iletişim") || msg.Contains("hr") || msg.Contains("ik"))
         {
-            return "İnsan Kaynakları süreçleriniz için İK Direktörümüz Ayşe Kaya (hr@seedhr.com) ile iletişime geçebilirsiniz. Teknik konular için BT Müdürü Can Demir (manager) yardımcı olacaktır.";
+            return "İnsan Kaynakları süreçleriniz için İK Direktörümüz Ayşe Kaya (seedhrms@outlook.com) ile iletişime geçebilirsiniz. Teknik konular için BT Müdürü Can Demir (manager) yardımcı olacaktır.";
         }
-        return "Merhaba! Ben SeedHR Yapay Zeka İK Asistanıyım. Şirket politikaları, izinler, çalışma saatleri, hibrit kurallar veya masraf talepleri hakkında sorularınızı sorabilirsiniz. Detaylı veya özel konular için İK Direktörümüz Ayşe Kaya (hr@seedhr.com) ile görüşebilirsiniz.";
+        return "Merhaba! Ben SeedHR Yapay Zeka İK Asistanıyım. Şirket politikaları, izinler, çalışma saatleri, hibrit kurallar veya masraf talepleri hakkında sorularınızı sorabilirsiniz. Detaylı veya özel konular için İK Direktörümüz Ayşe Kaya (seedhrms@outlook.com) ile görüşebilirsiniz.";
     }
 
     [HttpPost("suggest-questions")]

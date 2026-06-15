@@ -735,7 +735,7 @@ export default function LandingPage() {
               </Link>
             ) : (
               <a
-                href="mailto:info@seedhr.com.tr"
+                href="mailto:seedhrms@outlook.com"
                 className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 px-8 py-3 text-xs font-bold text-indigo-700 transition-all shadow-lg cursor-pointer animate-pulse duration-200"
               >
                 Bize Ulaşın <ArrowRight size={12} />
