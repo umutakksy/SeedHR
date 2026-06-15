@@ -10,7 +10,7 @@ export default function DuyuruPage() {
 
   useEffect(() => {
     setActiveTab("announcements");
-    router.push("/");
+    router.push("/dashboard");
   }, [router, setActiveTab]);
 
   return (

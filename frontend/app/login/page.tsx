@@ -37,7 +37,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (currentUser) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [currentUser]);
 
@@ -116,7 +116,7 @@ export default function LoginPage() {
       if (res.success) {
         login(res.data.user, res.data.token);
         toast.success(`Hoş geldiniz, ${res.data.user.fullName}`);
-        router.push("/");
+        router.push("/dashboard");
       } else {
         toast.error(res.message || "Giriş başarısız");
         resetCaptcha();
@@ -141,9 +141,7 @@ export default function LoginPage() {
         {/* Left Side: Illustration / Brand Banner */}
         <div className="hidden md:flex flex-col justify-between w-1/2 bg-gradient-to-br from-indigo-50/60 via-indigo-100/40 to-indigo-200/10 dark:from-indigo-950/20 dark:via-zinc-900/60 dark:to-zinc-950 p-10 text-left border-r border-slate-100 dark:border-zinc-800/80">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white shrink-0">
-              S
-            </div>
+            <img src="/icon.png" alt="SeedHR Logo" className="h-8 w-8 object-contain rounded-lg shrink-0 shadow-sm" />
             <span className="font-semibold text-base text-slate-800 dark:text-white tracking-wide">
               Seed<span className="text-indigo-600 dark:text-indigo-400">HR</span>
             </span>

@@ -129,7 +129,7 @@ const fallbackQuotes: DailyQuote[] = [
 
 export default function CompanyIntranetPage() {
   const router = useRouter();
-  const { currentUser, theme, setTheme, checkAuth } = useAppStore();
+  const { currentUser, theme, setTheme, checkAuth, setActiveTab } = useAppStore();
   const [authChecked, setAuthChecked] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -343,7 +343,7 @@ export default function CompanyIntranetPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">S</div>
+              <img src="/icon.png" alt="SeedHR Logo" className="h-8 w-8 object-contain rounded-lg shrink-0 shadow-sm" />
               <div>
                 <h1 className="text-sm font-bold text-slate-900 dark:text-white">Seed<span className="text-indigo-600 dark:text-indigo-400">HR</span></h1>
                 <p className="text-[10px] text-slate-500 dark:text-zinc-400 -mt-0.5">Şirket İntranet</p>
@@ -351,7 +351,7 @@ export default function CompanyIntranetPage() {
             </div>
 
             <nav className="hidden md:flex items-center gap-1">
-              <button onClick={() => router.push("/")} className="px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+              <button onClick={() => router.push("/dashboard")} className="px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                 Dashboard
               </button>
               <button className="px-3 py-2 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30">
@@ -386,7 +386,7 @@ export default function CompanyIntranetPage() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 py-3 space-y-2">
-          <button onClick={() => { router.push("/"); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">Dashboard</button>
+          <button onClick={() => { router.push("/dashboard"); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">Dashboard</button>
         </div>
       )}
 
@@ -495,7 +495,7 @@ export default function CompanyIntranetPage() {
                   <Megaphone size={16} className="text-indigo-600 dark:text-indigo-400" />
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">Şirket Duyuruları</h3>
                 </div>
-                <button onClick={() => router.push("/")} className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
+                <button onClick={() => { setActiveTab("announcements"); router.push("/dashboard"); }} className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
                   Tümünü Gör <ChevronRight size={10} />
                 </button>
               </div>
@@ -672,10 +672,10 @@ export default function CompanyIntranetPage() {
               <h3 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-3">Hızlı Erişim</h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "İzin Talebi", icon: Calendar, onClick: () => router.push("/") },
-                  { label: "Bordro", icon: DollarSign, onClick: () => router.push("/") },
-                  { label: "Eğitimler", icon: Star, onClick: () => router.push("/") },
-                  { label: "İK Destek", icon: Heart, onClick: () => router.push("/") },
+                  { label: "İzin Talebi", icon: Calendar, onClick: () => { setActiveTab("leaves"); router.push("/dashboard"); } },
+                  { label: "Bordro", icon: DollarSign, onClick: () => { setActiveTab("finance"); router.push("/dashboard"); } },
+                  { label: "Eğitimler", icon: Star, onClick: () => { setActiveTab("performance"); router.push("/dashboard"); } },
+                  { label: "İK Destek", icon: Heart, onClick: () => { setActiveTab("settings"); router.push("/dashboard"); } },
                 ].map((item, i) => (
                   <button key={i} onClick={item.onClick} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/60 dark:bg-zinc-800/40 hover:bg-white dark:hover:bg-zinc-800 border border-indigo-100/50 dark:border-indigo-800/30 transition-all text-left">
                     <item.icon size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />

@@ -69,9 +69,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Header / Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800/80">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white shrink-0">
-            S
-          </div>
+          <img src="/icon.png" alt="SeedHR Logo" className="h-8 w-8 object-contain rounded-lg shrink-0 shadow-sm" />
           <span
             className={clsx(
               "font-semibold text-base text-slate-800 dark:text-white transition-opacity duration-200 whitespace-nowrap tracking-wide",

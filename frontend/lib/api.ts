@@ -1826,13 +1826,13 @@ export const performanceAPI = {
 export const recruitmentAPI = {
   getJobPostings: async (): Promise<ApiResponse<JobPostingDto[]>> => {
     return wrapApiCall(
-      () => api.get("/recruitment/postings"),
+      () => api.get("/recruitment/job-postings/all"),
       () => mockDb.jobPostings
     );
   },
   createJobPosting: async (data: any): Promise<ApiResponse<JobPostingDto>> => {
     return wrapApiCall(
-      () => api.post("/recruitment/postings", data),
+      () => api.post("/recruitment/job-postings", data),
       () => {
         const dept = mockDb.departments.find(d => d.id === data.departmentId)!;
         const newJob: JobPostingDto = {

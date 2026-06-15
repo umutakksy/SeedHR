@@ -90,9 +90,7 @@ export default function JobApplicationPage() {
         <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-300 via-indigo-950 to-zinc-950"></div>
           <div className="relative z-10">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md font-bold text-white mb-3">
-              S
-            </div>
+            <img src="/icon.png" alt="SeedHR Logo" className="inline-flex h-10 w-10 object-contain rounded-xl bg-white/10 backdrop-blur-md p-1 mb-3 shrink-0" />
             <h1 className="text-xl font-bold tracking-tight">Kariyer Fırsatları</h1>
             <p className="text-xs text-indigo-100 mt-1">SeedHR ailesine katılmak için başvuru formunu doldurun.</p>
           </div>
