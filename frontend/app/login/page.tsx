@@ -105,14 +105,14 @@ export default function LoginPage() {
       return;
     }
 
-    if (!captchaToken) {
+    if (!captchaToken && process.env.NODE_ENV !== "development") {
       toast.error("Lütfen robot olmadığınızı doğrulayın");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await authAPI.login({ email, password, turnstileToken: captchaToken });
+      const res = await authAPI.login({ email, password, turnstileToken: captchaToken || "dev-bypass" });
       if (res.success) {
         login(res.data.user, res.data.token);
         toast.success(`Hoş geldiniz, ${res.data.user.fullName}`);
@@ -200,13 +200,15 @@ export default function LoginPage() {
             </div>
 
             {/* Cloudflare Turnstile — native script yükleme */}
-            <div className="flex justify-center py-1">
-              <div ref={containerRef} />
-            </div>
+            {process.env.NODE_ENV !== "development" && (
+              <div className="flex justify-center py-1">
+                <div ref={containerRef} />
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={loading || !captchaToken}
+              disabled={loading || (process.env.NODE_ENV !== "development" && !captchaToken)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-2.5 text-xs font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/10"
             >
               {loading ? (
